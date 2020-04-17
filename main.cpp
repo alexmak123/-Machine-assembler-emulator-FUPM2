@@ -278,7 +278,7 @@ class J {
 public :
     J (vector <string> a) {
         command = a[0];
-        //when we use a function cant use stoi or it should be modified
+        //when we use a function we cant use stoi or it should be modified
         address = stoi(a[1]);
         int command_int = str_to_command[command];
         total_value += to_binary(command_int, 8, 0);
