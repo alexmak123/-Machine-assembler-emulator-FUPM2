@@ -1,0 +1,14 @@
+# depslib dependency file v1.0
+1587151730 source:d:\mipt\2sem\proga\project\my_emulator_fupm2\main.cpp
+	<iostream>
+	<fstream>
+	<vector>
+	<cstring>
+	<stack>
+	<string>
+	<algorithm>
+	<sstream>
+	<map>
+	<assert.h>
+	<math.h>
+
