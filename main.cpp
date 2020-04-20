@@ -165,8 +165,9 @@ map <string, command_code> str_to_command  {
 
 
 //+
-string positive_int_to_binary (unsigned int n) {
+string positive_int_to_binary (int n) {
     string result;
+    assert(n >= 0);
 
     do
     {
@@ -174,19 +175,21 @@ string positive_int_to_binary (unsigned int n) {
         n = n / 2;
     } while (n > 0);
 
+    //in my view, I want to have numbers from the high bit to the low, so we need to reverse the line
+    reverse(result.begin(), result.end());
+
     return result;
 }
 
 
-//-(not sure)
-string to_binary (int value, int amount_of_bits, bool can_be_negative) {
+//+
+string to_binary (int value, int amount_of_bits) {
     //we check if it fits or not
     assert(abs(value) < pow(2, amount_of_bits));
     //all bits are 0 at the start
     string result(amount_of_bits, '0');
 
-    //WE SHOULD DIFFER SIGNED AND UNSIGNED SOMEHOW!!!...
-
+    //we will encode our numbers in "additional" representation (2^16=0; 3 + (-3) = 0 => -3 = 2^16-3)
     string in_binary;
     if (value >= 0) {
         in_binary = positive_int_to_binary(value);
@@ -196,16 +199,18 @@ string to_binary (int value, int amount_of_bits, bool can_be_negative) {
     }
 
     int j = result.size() - 1;
-    for (int i = in_binary.size()-1; i >=0; i--) {
+    for (int i = in_binary.size() - 1; i >=0; i--) {
         result[j] = in_binary[i];
         j--;
     }
     if (value < 0) {
         for (size_t i = 0; i < result.size(); i++) {
-            if (result[i] == '0')
+            if (result[i] == '0') {
                 result[i] = '1';
-            else
+            }
+            else {
                 result[i] = '0';
+            }
         }
     }
 
@@ -213,21 +218,15 @@ string to_binary (int value, int amount_of_bits, bool can_be_negative) {
 }
 
 
+map <string, int> map_for_functions_and_markers;
+
+
 //+
-class RM {
-public :
-    RM (vector <string> a) {
-        command = a[0];
-        registr = a[1];
-        address = stoi(a[2]);
-        int command_int = str_to_command[command];
-        int registr_int = str_to_registr[registr];
-        total_value += to_binary(command_int, 8, 0);
-        total_value += to_binary(registr_int, 4, 0);
-        total_value += to_binary(address, 20, 0);
+class functions_and_markers {
+public:
+    functions_and_markers (string a) {
+        total_value = to_binary(map_for_functions_and_markers[a], 32);
     }
-    string command, registr;
-    unsigned int address;
     string total_value;
 };
 
@@ -236,17 +235,12 @@ public :
 class RI {
 public :
     RI (vector <string> a) {
-        command = a[0];
-        registr1 = a[1];
+        command = str_to_command[a[0]];
+        registr_1 = str_to_registr[a[1]];
         value = stoi(a[2]);
-        int command_int = str_to_command[command];
-        int registr1_int = str_to_registr[registr1];
-        total_value += to_binary(command_int, 8, 0);
-        total_value += to_binary(registr1_int, 4, 0);
-        total_value += to_binary(value, 20, 1);
+        total_value = to_binary(command, 8) + "|" + to_binary(registr_1, 4) + "|" + to_binary(value, 20);
     }
-    string command, registr1;
-    int value;
+    int command, registr_1, value;
     string total_value;
 };
 
@@ -255,52 +249,51 @@ public :
 class RR {
 public :
     RR (vector <string> a) {
-        command = a[0];
-        registr1 = a[1];
-        registr2 = a[2];
+        command = str_to_command[a[0]];
+        registr_1 = str_to_registr[a[1]];
+        registr_2 = str_to_registr[a[2]];
         value = stoi(a[3]);
-        int command_int = str_to_command[command];
-        int registr1_int = str_to_registr[registr1];
-        int registr2_int = str_to_registr[registr2];
-        total_value += to_binary(command_int, 8, 0);
-        total_value += to_binary(registr1_int, 4, 0);
-        total_value += to_binary(registr2_int, 4, 0);
-        total_value += to_binary(value, 16, 1);
+        total_value = to_binary(command, 8) + "|" + to_binary(registr_1, 4) + "|" + to_binary(registr_2, 4) + "|" + to_binary(value, 16);
+
     }
-    string command, registr1, registr2;
-    int value;
+    int command, registr_1, registr_2, value;
     string total_value;
 };
 
 
-//-
+//+
+class RM {
+public :
+    RM (vector <string> a) {
+        command = str_to_command[a[0]];
+        registr = str_to_registr[a[1]];
+        //it's always an address of a specific value in my_Emulator address space that's why we can just use stoi
+        address = stoi(a[2]);
+        total_value = to_binary(command, 8) + "|" + to_binary(registr, 4) + "|" + to_binary(address, 20);
+    }
+    int command, registr, address;
+    string total_value;
+};
+
+
+//+
 class J {
 public :
     J (vector <string> a) {
-        command = a[0];
-        //when we use a function we cant use stoi or it should be modified
-        address = stoi(a[1]);
-        int command_int = str_to_command[command];
-        total_value += to_binary(command_int, 8, 0);
-        total_value += to_binary(address, 20, 0);
+        command = str_to_command[a[0]];
+        //our a[1] can be a string (address space of my_Compiler) and it can be a number (address space of my_Emulator)
+        //if it's a number - it's an address of a specific value in my_Emulator address space
+        if (a[1][0] >= '0' && a[1][0] <= '9') {
+            address = stoi(a[1]);
+        }
+        //if it's a string - it's an address of function or marker in machine code
+        else {
+            address = map_for_functions_and_markers[a[1]];
+        }
+        total_value = to_binary(command, 8) + "|" + "0000" + "|" + to_binary(address, 20);
     }
-    string command;
-    unsigned int address;
+    int command, address;
     string total_value;
-};
-
-
-map <string, int> map_for_functions_and_markers;
-int MAX_VALUE_IN_MAP = 0;
-
-
-//-
-class functions_and_markers {
-public:
-    functions_and_markers (string a) {
-
-    }
-    string total_value = "it's a function will deal with it later :)";
 };
 
 
@@ -309,7 +302,7 @@ void normalize (string& a) {
     while (a[0] == ' ') {
         a.erase(a.begin());
     }
-    while (a[a.size()-1] == ' ') {
+    while (a[a.size()-1] == ' ' || a[a.size()-1] == ':') {
         a.erase(a.begin() + a.size() - 1);
     }
 }
@@ -350,9 +343,26 @@ string define_a_type (string a) {
 }
 
 
-//+-
+//+
+void declare_all_functions_and_markers (vector<string> input_assembler) {
+    for (size_t i = 0; i < input_assembler.size(); i++) {
+        string curr_line = input_assembler[i];
+        normalize(curr_line);
+        string type = define_a_type(curr_line);
+        if (type == "functions_and_markers") {
+            map_for_functions_and_markers.insert({curr_line, i});
+        }
+    }
+}
+
+
+//+
 vector<string> to_machine_code (vector<string> input_assembler) {
     vector<string> output;
+
+    //at first we should declare all functions in our input to our map so during the main pass we can see them
+    declare_all_functions_and_markers(input_assembler);
+
     for (size_t i = 0; i < input_assembler.size(); i++) {
         string curr_line = input_assembler[i];
         normalize(curr_line);
@@ -375,6 +385,7 @@ vector<string> to_machine_code (vector<string> input_assembler) {
             output.push_back(curr_line_in_machine_code.total_value);
         }
     }
+
     return output;
 }
 
