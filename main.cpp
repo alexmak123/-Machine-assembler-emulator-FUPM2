@@ -9,6 +9,7 @@
 #include <map>
 #include <assert.h>
 #include <math.h>
+#include <limits.h>
 using namespace std;
 
 
@@ -164,6 +165,14 @@ map <string, command_code> str_to_command  {
 };
 
 
+//address of the function is an address of the next line after the name of the function
+map <string, int> map_for_functions_and_markers;
+
+
+//max size of the address space of my_Emulator
+const int MAX_SIZE = 10000001;
+
+
 //+
 string positive_int_to_binary (int n) {
     string result;
@@ -216,19 +225,6 @@ string to_binary (int value, int amount_of_bits) {
 
     return result;
 }
-
-
-map <string, int> map_for_functions_and_markers;
-
-
-//+
-class functions_and_markers {
-public:
-    functions_and_markers (string a) {
-        total_value = to_binary(map_for_functions_and_markers[a], 32);
-    }
-    string total_value;
-};
 
 
 //+
@@ -344,13 +340,15 @@ string define_a_type (string a) {
 
 
 //+
-void declare_all_functions_and_markers (vector<string> input_assembler) {
+void declare_all_functions_and_markers (vector<string>& input_assembler) {
     for (size_t i = 0; i < input_assembler.size(); i++) {
         string curr_line = input_assembler[i];
         normalize(curr_line);
         string type = define_a_type(curr_line);
         if (type == "functions_and_markers") {
             map_for_functions_and_markers.insert({curr_line, i});
+            input_assembler.erase(input_assembler.begin() + i);
+            i--;
         }
     }
 }
@@ -360,7 +358,7 @@ void declare_all_functions_and_markers (vector<string> input_assembler) {
 vector<string> to_machine_code (vector<string> input_assembler) {
     vector<string> output;
 
-    //at first we should declare all functions in our input to our map so during the main pass we can see them
+    //at first we should declare all functions in our input and erase them so during the main pass we cant see them
     declare_all_functions_and_markers(input_assembler);
 
     for (size_t i = 0; i < input_assembler.size(); i++) {
@@ -380,9 +378,6 @@ vector<string> to_machine_code (vector<string> input_assembler) {
         } else if (type == "J") {
             J curr_line_in_machine_code(parsed_line);
             output.push_back(curr_line_in_machine_code.total_value);
-        } else {
-            functions_and_markers curr_line_in_machine_code(curr_line);
-            output.push_back(curr_line_in_machine_code.total_value);
         }
     }
 
@@ -396,6 +391,7 @@ class my_Compiler {
 public :
     my_Compiler (vector <string>);
     void Print ();
+    vector <string> return_words ();
 private :
     vector <string> words; // it's 2^{20} words which have length 32. Each word consists from 0 and 1 and has address from 0 to 2^{20}-1
 };
@@ -404,13 +400,86 @@ private :
 //+
 my_Compiler :: my_Compiler (vector <string> input_assembler) {
     words = to_machine_code(input_assembler);
+    //now we will add extra information to the start so our executive file will be pretty :)
+    words.emplace(words.begin(),"start address of the stack : 10^8");
+    words.emplace(words.begin(),"number of the line where machine code starts : 7");
+    words.emplace(words.begin(),"size of the words : 32bits");
+    words.emplace(words.begin(),"size of the const : differs");
+    words.emplace(words.begin(),"size of the machine code : " +  to_string(words.size()-5));
+    words.emplace(words.begin(),"ThisIsFUPM2Exec");
 }
 
 
 //+
 void my_Compiler :: Print () {
     for (size_t i = 0; i < words.size(); i++) {
-        cout << "address : " << i << "; word : " << words[i] << endl;
+        if (i >= 6) {
+            cout << "address : " << i - 6<< "; word : ";
+        }
+        cout << words[i] << endl;
+    }
+}
+
+
+//+
+vector <string> my_Compiler :: return_words () {
+    return words;
+}
+
+
+//+
+//Von Neumann architecture - this means that we have one address space for everything (for values, stack, machine code)
+class my_Emulator {
+public :
+    //functions
+    void halt();
+    void syscall();
+    //we should initialize address space when we send machine code to my_Emulator
+    my_Emulator (my_Compiler);
+    //program which executes machine code (should check with assert that my_Emulator is initialized)
+    void Execute ();
+    //Prints :)
+    void Print ();
+private :
+    vector <int> free_registrs;
+    int frame_call_registr;
+    int stack_pointer_registr;
+    int counter_registr;
+    bool flags;
+    vector <string> Von_Neumann_Memory;
+};
+
+
+//+
+my_Emulator :: my_Emulator (my_Compiler executive_file) : free_registrs(12,0), Von_Neumann_Memory(MAX_SIZE) {
+    stack_pointer_registr = MAX_SIZE - 1;
+    frame_call_registr = stack_pointer_registr;
+    counter_registr = 0;
+    flags = false;
+    vector <string> curr = executive_file.return_words();
+    for (size_t i = 6; i < curr.size(); i++) {
+        Von_Neumann_Memory[i-6] = curr[i];
+    }
+}
+
+
+//+
+void my_Emulator :: Print () {
+    cout << "free registers: " << endl;
+    for (size_t i = 0; i < free_registrs.size(); i++) {
+        cout << "   " << free_registrs[i] << endl;
+    }
+    cout << "frame-call register: " << endl;
+    cout << "   " << frame_call_registr << endl;
+    cout << "stack pointer registr: " << endl;
+    cout << "   " << stack_pointer_registr << endl;
+    cout << "counter_registr: " << endl;
+    cout << "   " << counter_registr << endl;
+    cout << "flag: " << endl;
+    cout << "   " << flags << endl;
+    cout << "address space: " << endl;
+    for (size_t i = 0; i < 100; i++) {
+        cout << "   " << Von_Neumann_Memory[i] << endl;
     }
 }
 
@@ -419,7 +488,6 @@ int main(int argc, char* argv[])
 {
     vector<string> input_assembler;
     string line;
-
 
     //we open file for reading and we fill in the vector with lines
     ifstream in("input.fasm.txt");
@@ -430,8 +498,15 @@ int main(int argc, char* argv[])
     }
     in.close();
 
+    my_Compiler executable_file(input_assembler);
+    executable_file.Print();
+    cout << endl;
+    for (auto i : map_for_functions_and_markers) {
+        cout << i.first << " " << i.second << endl;
+    }
+    cout << endl;
 
-    my_Compiler programm1(input_assembler);
-    programm1.Print();
+    my_Emulator programm(executable_file);
+    programm.Print();
     return 0;
 }
