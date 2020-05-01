@@ -640,7 +640,7 @@ void my_Emulator :: Print () {
     cout << "end machine code pointer: " << endl;
     cout << "                       " << end_machine_code_pointer << endl;
     cout << "address space: " << endl;
-    for (size_t i = 0; i < 100; i++) {
+    for (size_t i = 0; i < 25; i++) {
         cout << "                       " << Von_Neumann_Memory[i] << endl;
     }
 }
@@ -665,78 +665,77 @@ void my_Emulator :: Execute () {
             RR input_in_command (curr_line_in_binary);
             //some cases
             switch (command) {
-                //case 2 : add (input_in_command);
-                //case 4 : sub (input_in_command);
-                //case 6 : mul (input_in_command);
-                //case 8 : div (input_in_command);
-                //case 13 : shl (input_in_command);
-                //case 15 : shr (input_in_command);
-                //case 17 : and (input_in_command);
-                //case 19 : or (input_in_command);
-                //case 21 : xor (input_in_command);
-                //case 24 : mov (input_in_command);
-                //case 32 : addd (input_in_command);
-                //case 33 : subq (input_in_command);
-                //case 34 : muld (input_in_command);
-                //case 35 : divd (input_in_command);
-                //case 36 : itod (input_in_command);
-                //case 37 : dtoi (input_in_command);
-                //case 40 : call (input_in_command);
-                //case 43 : cmp (input_in_command);
-                //case 45 : cmpd (input_in_command);
-                //case 68 : loadr (input_in_command);
-                //case 69 : storer (input_in_command);
-                //case 70 : loadr2 (input_in_command);
-                //case 71 : storer2 (input_in_command);
+                //case 2 : add (input_in_command); break;
+                //case 4 : sub (input_in_command); break;
+                //case 6 : mul (input_in_command); break;
+                //case 8 : div (input_in_command); break;
+                //case 13 : shl (input_in_command); break;
+                //case 15 : shr (input_in_command); break;
+                //case 17 : and (input_in_command); break;
+                //case 19 : or (input_in_command); break;
+                //case 21 : xor (input_in_command); break;
+                //case 24 : mov (input_in_command); break;
+                //case 32 : addd (input_in_command); break;
+                //case 33 : subq (input_in_command); break;
+                //case 34 : muld (input_in_command); break;
+                //case 35 : divd (input_in_command); break;
+                //case 36 : itod (input_in_command); break;
+                //case 37 : dtoi (input_in_command); break;
+                //case 40 : call (input_in_command); break;
+                //case 43 : cmp (input_in_command); break;
+                //case 45 : cmpd (input_in_command); break;
+                //case 68 : loadr (input_in_command); break;
+                //case 69 : storer (input_in_command); break;
+                //case 70 : loadr2 (input_in_command); break;
+                //case 71 : storer2 (input_in_command); break;
             }
         } else if (type == "RI") {
             RI input_in_command (curr_line_in_binary);
             //also some cases
             switch (command) {
-                case 0 : halt (input_in_command);
-                case 1 : syscall (input_in_command);
-                case 3 : addi (input_in_command);
-                //case 5 : subi (input_in_command);
-                //case 7 : muli (input_in_command);
-                //case 9 : divi (input_in_command);
-                //case 12 : lc (input_in_command);
-                //case 14 : shli (input_in_command);
-                //case 16 : shri (input_in_command);
-                //case 18 : andi (input_in_command);
-                //case 20 : ori (input_in_command);
-                //case 22 : xori (input_in_command);
-                //case 23 : not (input_in_command);
-                //case 38 : push (input_in_command);
-                //case 39 : pop (input_in_command);
-                //case 42 : ret (input_in_command);
-                //case 44 : cmpi (input_in_command);
+                case 0 : halt (input_in_command); break;
+                case 1 : syscall (input_in_command); break;
+                case 3 : addi (input_in_command); break;
+                //case 5 : subi (input_in_command); break;
+                //case 7 : muli (input_in_command); break;
+                //case 9 : divi (input_in_command); break;
+                //case 12 : lc (input_in_command); break;
+                //case 14 : shli (input_in_command); break;
+                //case 16 : shri (input_in_command); break;
+                //case 18 : andi (input_in_command); break;
+                //case 20 : ori (input_in_command); break;
+                //case 22 : xori (input_in_command); break;
+                //case 23 : not (input_in_command); break;
+                //case 38 : push (input_in_command); break;
+                //case 39 : pop (input_in_command); break;
+                //case 42 : ret (input_in_command); break;
+                //case 44 : cmpi (input_in_command); break;
             }
         } else if (type == "RM") {
             RM input_in_command (curr_line_in_binary);
             //mmm some more cases
             switch (command) {
-                //case 64 : load (input_in_command);
-                //case 65 : store (input_in_command);
-                //case 66 : load2 (input_in_command);
-                //case 67 : store2 (input_in_command);
+                //case 64 : load (input_in_command); break;
+                //case 65 : store (input_in_command); break;
+                //case 66 : load2 (input_in_command); break;
+                //case 67 : store2 (input_in_command); break;
             }
         } else if (type == "J") {
             J input_in_command (curr_line_in_binary);
             //finally
             switch (command) {
-                //case 41 : calli (input_in_command);
-                //case 46 : jmp (input_in_command);
-                //case 47 : jne (input_in_command);
-                //case 48 : jeq (input_in_command);
-                //case 49 : jle (input_in_command);
-                //case 50 : jl (input_in_command);
-                //case 51 : jge (input_in_command);
-                //case 52 : jg (input_in_command);
+                //case 41 : calli (input_in_command); break;
+                //case 46 : jmp (input_in_command); break;
+                //case 47 : jne (input_in_command); break;
+                //case 48 : jeq (input_in_command); break;
+                //case 49 : jle (input_in_command); break;
+                //case 50 : jl (input_in_command); break;
+                //case 51 : jge (input_in_command); break;
+                //case 52 : jg (input_in_command); break;
             }
         } else {
             cout << "Not appropriate type of the command in execute" << endl;
         }
-
         counter_registr++;
     }
 }

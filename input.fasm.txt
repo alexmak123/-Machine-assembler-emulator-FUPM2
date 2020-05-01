@@ -1,4 +1,4 @@
 main:
-    syscall r5 100
-    syscall r5 102
+    syscall r6 100
+    syscall r6 102
     end main
