@@ -13,6 +13,9 @@
 using namespace std;
 
 
+/////////////////////////////////////////////////////////// CONSTS ///////////////////////////////////////////////////////////
+
+
 enum registr_code {
 r0 = 0,
 r1 = 1,
@@ -165,12 +168,71 @@ map <string, command_code> str_to_command  {
 };
 
 
+map <unsigned int, string> command_to_type_of_command  {
+{HALT, "RI"},
+{SYSCALL, "RI"},
+{ADD, "RR"},
+{ADDI, "RI"},
+{SUB, "RR"},
+{SUBI, "RI"},
+{MUL, "RR"},
+{MULI, "RI"},
+{DIV, "RR"},
+{DIVI, "RI"},
+{LC, "RI"},
+{SHL, "RR"},
+{SHLI, "RI"},
+{SHR, "RR"},
+{SHRI, "RI"},
+{AND, "RR"},
+{ANDI, "RI"},
+{OR, "RR"},
+{ORI, "RI"},
+{XOR, "RR"},
+{XORI, "RI"},
+{NOT, "RI"},
+{MOV, "RR"},
+{ADDD, "RR"},
+{SUBD, "RR"},
+{MULD, "RR"},
+{DIVD, "RR"},
+{ITOD, "RR"},
+{DTOI, "RR"},
+{PUSH, "RI"},
+{POP, "RI"},
+{CALL, "RR"},
+{CALLI, "J"},
+{RET, "RI"},
+{CMP, "RR"},
+{CMPI, "RI"},
+{CMPD, "RR"},
+{JMP, "J"},
+{JNE, "J"},
+{JEQ, "J"},
+{JLE, "J"},
+{JL, "J"},
+{JGE, "J"},
+{JG, "J"},
+{LOAD, "RM"},
+{STORE, "RM"},
+{LOAD2, "RM"},
+{STORE2, "RM"},
+{LOADR, "RR"},
+{LOADR2, "RR"},
+{STORER, "RR"},
+{STORER2, "RR"},
+};
+
+
 //address of the function is an address of the next line after the name of the function
-map <string, int> map_for_functions_and_markers;
+map <string, unsigned int> map_for_functions_and_markers;
 
 
 //max size of the address space of my_Emulator
-const int MAX_SIZE = 10000001;
+const unsigned int MAX_SIZE = 10000001;
+
+
+/////////////////////////////////////////////////////////// THE FIRST PART ///////////////////////////////////////////////////////////
 
 
 //+
@@ -228,15 +290,48 @@ string to_binary (int value, int amount_of_bits) {
 
 
 //+
+unsigned int calculate_str_in_binary_to_int (string str_in_binary) {
+    unsigned int res = 0;
+
+    for (size_t i = 0; i < str_in_binary.size(); i++) {
+        assert (str_in_binary[i] == '0' || str_in_binary[i] == '1');
+        res *= 2;
+        res += str_in_binary[i] - '0';
+    }
+
+    return res;
+}
+
+
+//+
 class RI {
 public :
-    RI (vector <string> a) {
-        command = str_to_command[a[0]];
-        registr_1 = str_to_registr[a[1]];
-        value = stoi(a[2]);
-        total_value = to_binary(command, 8) + "|" + to_binary(registr_1, 4) + "|" + to_binary(value, 20);
+    RI (vector <string> parsed_line_in_assembler) {
+        command = str_to_command[parsed_line_in_assembler[0]];
+        registr_1 = str_to_registr[parsed_line_in_assembler[1]];
+        value = stoi(parsed_line_in_assembler[2]);
+        total_value = to_binary(command, 8) + to_binary(registr_1, 4) + to_binary(value, 20);
     }
-    int command, registr_1, value;
+    RI (string line_in_machine_code) {
+        assert (line_in_machine_code.size() == 32);
+        string command_in_binary, registr_1_in_binary, value_in_binary;
+        for (size_t i = 0; i < line_in_machine_code.size(); i++) {
+            if (i < 8) {
+                command_in_binary += line_in_machine_code[i];
+            } else if (i >= 8 && i < 12) {
+                registr_1_in_binary += line_in_machine_code[i];
+            } else {
+                value_in_binary += line_in_machine_code[i];
+            }
+        }
+        assert (command_in_binary.size() == 8);
+        assert (registr_1_in_binary.size() == 4);
+        assert (value_in_binary.size() == 20);
+        command = calculate_str_in_binary_to_int(command_in_binary);
+        registr_1 = calculate_str_in_binary_to_int(registr_1_in_binary);
+        value = calculate_str_in_binary_to_int(value_in_binary);
+    }
+    unsigned int command, registr_1, value;
     string total_value;
 };
 
@@ -244,15 +339,38 @@ public :
 //+
 class RR {
 public :
-    RR (vector <string> a) {
-        command = str_to_command[a[0]];
-        registr_1 = str_to_registr[a[1]];
-        registr_2 = str_to_registr[a[2]];
-        value = stoi(a[3]);
-        total_value = to_binary(command, 8) + "|" + to_binary(registr_1, 4) + "|" + to_binary(registr_2, 4) + "|" + to_binary(value, 16);
+    RR (vector <string> parsed_line_in_assembler) {
+        command = str_to_command[parsed_line_in_assembler[0]];
+        registr_1 = str_to_registr[parsed_line_in_assembler[1]];
+        registr_2 = str_to_registr[parsed_line_in_assembler[2]];
+        value = stoi(parsed_line_in_assembler[3]);
+        total_value = to_binary(command, 8) + to_binary(registr_1, 4) + to_binary(registr_2, 4) + to_binary(value, 16);
 
     }
-    int command, registr_1, registr_2, value;
+    RR (string line_in_machine_code) {
+        assert (line_in_machine_code.size() == 32);
+        string command_in_binary, registr_1_in_binary, registr_2_in_binary, value_in_binary;
+        for (size_t i = 0; i < line_in_machine_code.size(); i++) {
+            if (i < 8) {
+                command_in_binary += line_in_machine_code[i];
+            } else if (i >= 8 && i < 12) {
+                registr_1_in_binary += line_in_machine_code[i];
+            } else if (i >= 12 && i < 16) {
+                registr_2_in_binary += line_in_machine_code[i];
+            } else {
+                value_in_binary += line_in_machine_code[i];
+            }
+        }
+        assert (command_in_binary.size() == 8);
+        assert (registr_1_in_binary.size() == 4);
+        assert (registr_2_in_binary.size() == 4);
+        assert (value_in_binary.size() == 16);
+        command = calculate_str_in_binary_to_int(command_in_binary);
+        registr_1 = calculate_str_in_binary_to_int(registr_1_in_binary);
+        registr_2 = calculate_str_in_binary_to_int(registr_2_in_binary);
+        value = calculate_str_in_binary_to_int(value_in_binary);
+    }
+    unsigned int command, registr_1, registr_2, value;
     string total_value;
 };
 
@@ -260,14 +378,33 @@ public :
 //+
 class RM {
 public :
-    RM (vector <string> a) {
-        command = str_to_command[a[0]];
-        registr = str_to_registr[a[1]];
+    RM (vector <string> parsed_line_in_assembler) {
+        command = str_to_command[parsed_line_in_assembler[0]];
+        registr = str_to_registr[parsed_line_in_assembler[1]];
         //it's always an address of a specific value in my_Emulator address space that's why we can just use stoi
-        address = stoi(a[2]);
-        total_value = to_binary(command, 8) + "|" + to_binary(registr, 4) + "|" + to_binary(address, 20);
+        address = stoi(parsed_line_in_assembler[2]);
+        total_value = to_binary(command, 8) + to_binary(registr, 4) + to_binary(address, 20);
     }
-    int command, registr, address;
+    RM (string line_in_machine_code) {
+        assert (line_in_machine_code.size() == 32);
+        string command_in_binary, registr_in_binary, address_in_binary;
+        for (size_t i = 0; i < line_in_machine_code.size(); i++) {
+            if (i < 8) {
+                command_in_binary += line_in_machine_code[i];
+            } else if (i >= 8 && i < 12) {
+                registr_in_binary += line_in_machine_code[i];
+            } else {
+                address_in_binary += line_in_machine_code[i];
+            }
+        }
+        assert (command_in_binary.size() == 8);
+        assert (registr_in_binary.size() == 4);
+        assert (address_in_binary.size() == 20);
+        command = calculate_str_in_binary_to_int(command_in_binary);
+        registr = calculate_str_in_binary_to_int(registr_in_binary);
+        address = calculate_str_in_binary_to_int(address_in_binary);
+    }
+    unsigned int command, registr, address;
     string total_value;
 };
 
@@ -275,20 +412,37 @@ public :
 //+
 class J {
 public :
-    J (vector <string> a) {
-        command = str_to_command[a[0]];
+    J (vector <string> parsed_line_in_assembler) {
+        command = str_to_command[parsed_line_in_assembler[0]];
         //our a[1] can be a string (address space of my_Compiler) and it can be a number (address space of my_Emulator)
         //if it's a number - it's an address of a specific value in my_Emulator address space
-        if (a[1][0] >= '0' && a[1][0] <= '9') {
-            address = stoi(a[1]);
+        if (parsed_line_in_assembler[1][0] >= '0' && parsed_line_in_assembler[1][0] <= '9') {
+            address = stoi(parsed_line_in_assembler[1]);
         }
         //if it's a string - it's an address of function or marker in machine code
         else {
-            address = map_for_functions_and_markers[a[1]];
+            address = map_for_functions_and_markers[parsed_line_in_assembler[1]];
         }
-        total_value = to_binary(command, 8) + "|" + "0000" + "|" + to_binary(address, 20);
+        total_value = to_binary(command, 8) + "0000" + to_binary(address, 20);
     }
-    int command, address;
+    J (string line_in_machine_code) {
+        assert (line_in_machine_code.size() == 32);
+        string command_in_binary, address_in_binary;
+        for (size_t i = 0; i < line_in_machine_code.size(); i++) {
+            if (i < 8) {
+                command_in_binary += line_in_machine_code[i];
+            } else if (i >= 8 && i < 12) {
+                //just skip it;
+            } else {
+                address_in_binary += line_in_machine_code[i];
+            }
+        }
+        assert (command_in_binary.size() == 8);
+        assert (address_in_binary.size() == 20);
+        command = calculate_str_in_binary_to_int(command_in_binary);
+        address = calculate_str_in_binary_to_int(address_in_binary);
+    }
+    unsigned int command, address;
     string total_value;
 };
 
@@ -405,7 +559,7 @@ my_Compiler :: my_Compiler (vector <string> input_assembler) {
     words.emplace(words.begin(),"number of the line where machine code starts : 7");
     words.emplace(words.begin(),"size of the words : 32bits");
     words.emplace(words.begin(),"size of the const : differs");
-    words.emplace(words.begin(),"size of the machine code : " +  to_string(words.size()-5));
+    words.emplace(words.begin(),"size of the machine code : " +  to_string(words.size()-4));
     words.emplace(words.begin(),"ThisIsFUPM2Exec");
 }
 
@@ -427,36 +581,42 @@ vector <string> my_Compiler :: return_words () {
 }
 
 
+/////////////////////////////////////////////////////////// THE SECOND PART ///////////////////////////////////////////////////////////
+
+
 //+
 //Von Neumann architecture - this means that we have one address space for everything (for values, stack, machine code)
 class my_Emulator {
 public :
     //functions
-    void halt();
-    void syscall();
+    void halt(RI input) ;
+    void syscall(RI input);
+    void addi (RI input);
     //we should initialize address space when we send machine code to my_Emulator
     my_Emulator (my_Compiler);
     //program which executes machine code (should check with assert that my_Emulator is initialized)
     void Execute ();
-    //Prints :)
+    //prints :)
     void Print ();
 private :
-    vector <int> free_registrs;
-    int frame_call_registr;
-    int stack_pointer_registr;
-    int counter_registr;
+    vector <unsigned int> free_registrs;
+    unsigned int frame_call_registr;
+    unsigned int stack_pointer_registr;
+    unsigned int counter_registr;
     bool flags;
+    unsigned int end_machine_code_pointer;
     vector <string> Von_Neumann_Memory;
 };
 
 
 //+
-my_Emulator :: my_Emulator (my_Compiler executive_file) : free_registrs(12,0), Von_Neumann_Memory(MAX_SIZE) {
+my_Emulator :: my_Emulator (my_Compiler executive_file) : free_registrs(13,0), Von_Neumann_Memory(MAX_SIZE) {
     stack_pointer_registr = MAX_SIZE - 1;
     frame_call_registr = stack_pointer_registr;
     counter_registr = 0;
     flags = false;
     vector <string> curr = executive_file.return_words();
+    end_machine_code_pointer = curr.size() - 6;
     for (size_t i = 6; i < curr.size(); i++) {
         Von_Neumann_Memory[i-6] = curr[i];
     }
@@ -467,19 +627,180 @@ my_Emulator :: my_Emulator (my_Compiler executive_file) : free_registrs(12,0), V
 void my_Emulator :: Print () {
     cout << "free registers: " << endl;
     for (size_t i = 0; i < free_registrs.size(); i++) {
-        cout << "   " << free_registrs[i] << endl;
+        cout << "                       " << free_registrs[i] << endl;
     }
     cout << "frame-call register: " << endl;
-    cout << "   " << frame_call_registr << endl;
-    cout << "stack pointer registr: " << endl;
-    cout << "   " << stack_pointer_registr << endl;
-    cout << "counter_registr: " << endl;
-    cout << "   " << counter_registr << endl;
+    cout << "                       " << frame_call_registr << endl;
+    cout << "stack pointer register: " << endl;
+    cout << "                       " << stack_pointer_registr << endl;
+    cout << "counter register: " << endl;
+    cout << "                       " << counter_registr << endl;
     cout << "flag: " << endl;
-    cout << "   " << flags << endl;
+    cout << "                       " << flags << endl;
+    cout << "end machine code pointer: " << endl;
+    cout << "                       " << end_machine_code_pointer << endl;
     cout << "address space: " << endl;
     for (size_t i = 0; i < 100; i++) {
-        cout << "   " << Von_Neumann_Memory[i] << endl;
+        cout << "                       " << Von_Neumann_Memory[i] << endl;
+    }
+}
+
+
+//...
+void my_Emulator :: Execute () {
+    //at first we check if my_Emulator is initialized
+    assert (end_machine_code_pointer != 0);
+
+    while (counter_registr < end_machine_code_pointer) {
+        string curr_line_in_binary = Von_Neumann_Memory[counter_registr];
+
+        string command_in_binary;
+        for (int i = 0; i < 8; i++) {
+            command_in_binary += curr_line_in_binary[i];
+        }
+        unsigned int command = calculate_str_in_binary_to_int(command_in_binary);
+        string type = command_to_type_of_command[command];
+
+        if (type == "RR") {
+            RR input_in_command (curr_line_in_binary);
+            //some cases
+            switch (command) {
+                //case 2 : add (input_in_command);
+                //case 4 : sub (input_in_command);
+                //case 6 : mul (input_in_command);
+                //case 8 : div (input_in_command);
+                //case 13 : shl (input_in_command);
+                //case 15 : shr (input_in_command);
+                //case 17 : and (input_in_command);
+                //case 19 : or (input_in_command);
+                //case 21 : xor (input_in_command);
+                //case 24 : mov (input_in_command);
+                //case 32 : addd (input_in_command);
+                //case 33 : subq (input_in_command);
+                //case 34 : muld (input_in_command);
+                //case 35 : divd (input_in_command);
+                //case 36 : itod (input_in_command);
+                //case 37 : dtoi (input_in_command);
+                //case 40 : call (input_in_command);
+                //case 43 : cmp (input_in_command);
+                //case 45 : cmpd (input_in_command);
+                //case 68 : loadr (input_in_command);
+                //case 69 : storer (input_in_command);
+                //case 70 : loadr2 (input_in_command);
+                //case 71 : storer2 (input_in_command);
+            }
+        } else if (type == "RI") {
+            RI input_in_command (curr_line_in_binary);
+            //also some cases
+            switch (command) {
+                case 0 : halt (input_in_command);
+                case 1 : syscall (input_in_command);
+                case 3 : addi (input_in_command);
+                //case 5 : subi (input_in_command);
+                //case 7 : muli (input_in_command);
+                //case 9 : divi (input_in_command);
+                //case 12 : lc (input_in_command);
+                //case 14 : shli (input_in_command);
+                //case 16 : shri (input_in_command);
+                //case 18 : andi (input_in_command);
+                //case 20 : ori (input_in_command);
+                //case 22 : xori (input_in_command);
+                //case 23 : not (input_in_command);
+                //case 38 : push (input_in_command);
+                //case 39 : pop (input_in_command);
+                //case 42 : ret (input_in_command);
+                //case 44 : cmpi (input_in_command);
+            }
+        } else if (type == "RM") {
+            RM input_in_command (curr_line_in_binary);
+            //mmm some more cases
+            switch (command) {
+                //case 64 : load (input_in_command);
+                //case 65 : store (input_in_command);
+                //case 66 : load2 (input_in_command);
+                //case 67 : store2 (input_in_command);
+            }
+        } else if (type == "J") {
+            J input_in_command (curr_line_in_binary);
+            //finally
+            switch (command) {
+                //case 41 : calli (input_in_command);
+                //case 46 : jmp (input_in_command);
+                //case 47 : jne (input_in_command);
+                //case 48 : jeq (input_in_command);
+                //case 49 : jle (input_in_command);
+                //case 50 : jl (input_in_command);
+                //case 51 : jge (input_in_command);
+                //case 52 : jg (input_in_command);
+            }
+        } else {
+            cout << "Not appropriate type of the command in execute" << endl;
+        }
+
+        counter_registr++;
+    }
+}
+
+
+/////////////////////////////////////////////////////////// THE THIRD PART ///////////////////////////////////////////////////////////
+
+
+//...
+void my_Emulator :: halt (RI input) {
+
+}
+
+
+//...
+void my_Emulator :: syscall (RI input) {
+    if (input.value == 100) {
+        unsigned int a;
+        cin >> a;
+        //this doesn't look nice i ll fix this later
+        if (input.registr_1 >= 0 && input.registr_1 <= 12) {
+            free_registrs[input.registr_1] = a;
+        } else if (input.registr_1 == 13) {
+            frame_call_registr = a;
+        } else if (input.registr_1 == 14) {
+            stack_pointer_registr = a;
+        } else if (input.registr_1 == 15) {
+            counter_registr = a;
+        }
+    } else if (input.value == 101) {
+
+    } else if (input.value == 102) {
+        //the same
+        if (input.registr_1 >= 0 && input.registr_1 <= 12) {
+            cout << free_registrs[input.registr_1] << endl;
+        } else if (input.registr_1 == 13) {
+            cout << frame_call_registr << endl;
+        } else if (input.registr_1 == 14) {
+            cout << stack_pointer_registr << endl;
+        } else if (input.registr_1 == 15) {
+            cout << counter_registr << endl;
+        }
+    } else if (input.value == 103) {
+
+    } else if (input.value == 104) {
+
+    } else if (input.value == 105) {
+
+    }
+}
+
+
+//+
+void my_Emulator :: addi (RI input) {
+    if (input.registr_1 >= 0 && input.registr_1 <= 12) {
+        free_registrs[input.registr_1] += input.value;
+    } else if (input.registr_1 == 13) {
+        frame_call_registr += input.value;
+    } else if (input.registr_1 == 14) {
+        stack_pointer_registr += input.value;
+    } else if (input.registr_1 == 15) {
+        counter_registr += input.value;
+    } else  {
+        cout << "something wrong with registers in addi function" << endl;
     }
 }
 
@@ -508,5 +829,7 @@ int main(int argc, char* argv[])
 
     my_Emulator programm(executable_file);
     programm.Print();
+    cout << endl;
+    programm.Execute();
     return 0;
 }
