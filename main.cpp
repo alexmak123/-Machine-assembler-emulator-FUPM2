@@ -13,7 +13,7 @@
 using namespace std;
 
 
-/////////////////////////////////////////////////////////// CONSTS ///////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////// CONSTANTS ///////////////////////////////////////////////////////////
 
 
 enum registr_code {
@@ -108,7 +108,7 @@ STORE2 = 67,
 LOADR = 68,
 LOADR2 = 69,
 STORER = 70,
-STORER2 = 71
+STORER2 = 71,
 };
 
 
@@ -164,10 +164,11 @@ map <string, command_code> str_to_command  {
 {"loadr",LOADR},
 {"loadr2",LOADR2},
 {"storer",STORER},
-{"storer2",STORER2}
+{"storer2",STORER2},
 };
 
 
+//u_int because command cannot be negative
 map <unsigned int, string> command_to_type_of_command  {
 {HALT, "RI"},
 {SYSCALL, "RI"},
@@ -202,7 +203,7 @@ map <unsigned int, string> command_to_type_of_command  {
 {POP, "RI"},
 {CALL, "RR"},
 {CALLI, "J"},
-{RET, "RI"},
+{RET, "J"}, // ATTENTION IT HAS TYPE RI IN THE PROBLEM
 {CMP, "RR"},
 {CMPI, "RI"},
 {CMPD, "RR"},
@@ -224,19 +225,28 @@ map <unsigned int, string> command_to_type_of_command  {
 };
 
 
-//address of the function is an address of the next line after the name of the function
+//shows address of the function in my_Emulator address space
+//u_int because address cannot be negative
 map <string, unsigned int> map_for_functions_and_markers;
 
 
 //max size of the address space of my_Emulator
+//u_int because size cannot be negative
 const unsigned int MAX_SIZE = 10000001;
 
 
-/////////////////////////////////////////////////////////// THE FIRST PART ///////////////////////////////////////////////////////////
+//shows where we should start our executing
+//represents address in my emulator address space
+unsigned int ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS = 0;
+
+
+/////////////////////////////////////////////////////////// COMMAND TYPES ///////////////////////////////////////////////////////////
 
 
 //+
-string positive_int_to_binary (int n) {
+//template because we would use different types with different amounts of bits and we don't want to convert accidentally to a specific type
+template <typename T>
+string positive_T_to_binary (T n) {
     string result;
     assert(n >= 0);
 
@@ -254,34 +264,34 @@ string positive_int_to_binary (int n) {
 
 
 //+
-string to_binary (int value, int amount_of_bits) {
+//int because we will send signed values to the function and I guarantee that I wont send anything bigger than int ([-2^19;2^20-1])
+string to_binary (int value, unsigned int amount_of_bits, string type) {
     //we check if it fits or not
+    assert(amount_of_bits <= 20);
     assert(abs(value) < pow(2, amount_of_bits));
     //all bits are 0 at the start
     string result(amount_of_bits, '0');
+    if (value == 0) {
+        return result;
+    }
 
-    //we will encode our numbers in "additional" representation (2^16=0; 3 + (-3) = 0 => -3 = 2^16-3)
     string in_binary;
-    if (value >= 0) {
-        in_binary = positive_int_to_binary(value);
-    }
-    else if (value < 0) {
-        in_binary = positive_int_to_binary(abs(value) - 1);
-    }
-
+    in_binary = positive_T_to_binary (abs(value));
     int j = result.size() - 1;
     for (int i = in_binary.size() - 1; i >=0; i--) {
         result[j] = in_binary[i];
         j--;
     }
-    if (value < 0) {
-        for (size_t i = 0; i < result.size(); i++) {
-            if (result[i] == '0') {
-                result[i] = '1';
-            }
-            else {
-                result[i] = '0';
-            }
+
+    //if signed
+    if (type == "signed") {
+        //if negative
+        if (value < 0) {
+            result[0] = '1';
+        }
+        //if positive
+        else {
+            result[0] = '0';
         }
     }
 
@@ -290,13 +300,31 @@ string to_binary (int value, int amount_of_bits) {
 
 
 //+
-unsigned int calculate_str_in_binary_to_int (string str_in_binary) {
-    unsigned int res = 0;
+//int because we will send signed values to the function and I guarantee that I wont send anything bigger than int ([-2^19;2^20-1])
+int calculate_str_in_binary_to_int (string str_in_binary, string type) {
+    //check that we send only values in range [-2^19;2^20-1]
+    assert(str_in_binary.size() >= 16 && str_in_binary.size() <= 20);
+    int res = 0;
+    size_t i = 0;
 
-    for (size_t i = 0; i < str_in_binary.size(); i++) {
+    //if signed
+    if (type == "signed") {
+        i = 1;
+    }
+
+    for (;i < str_in_binary.size(); i++) {
         assert (str_in_binary[i] == '0' || str_in_binary[i] == '1');
         res *= 2;
         res += str_in_binary[i] - '0';
+    }
+
+    //if negative
+    if (type == "signed" && str_in_binary[0] == '1') {
+        res *= -1;
+        assert (res <= 0);
+        if (res == 0) {
+            return -pow(2,str_in_binary.size() - 1);
+        }
     }
 
     return res;
@@ -310,7 +338,7 @@ public :
         command = str_to_command[parsed_line_in_assembler[0]];
         registr_1 = str_to_registr[parsed_line_in_assembler[1]];
         value = stoi(parsed_line_in_assembler[2]);
-        total_value = to_binary(command, 8) + to_binary(registr_1, 4) + to_binary(value, 20);
+        total_value = to_binary(command, 8, "unsigned") + to_binary(registr_1, 4, "unsigned") + to_binary(value, 20, "signed");
     }
     RI (string line_in_machine_code) {
         assert (line_in_machine_code.size() == 32);
@@ -327,11 +355,12 @@ public :
         assert (command_in_binary.size() == 8);
         assert (registr_1_in_binary.size() == 4);
         assert (value_in_binary.size() == 20);
-        command = calculate_str_in_binary_to_int(command_in_binary);
-        registr_1 = calculate_str_in_binary_to_int(registr_1_in_binary);
-        value = calculate_str_in_binary_to_int(value_in_binary);
+        command = calculate_str_in_binary_to_int(command_in_binary, "unsigned");
+        registr_1 = calculate_str_in_binary_to_int(registr_1_in_binary, "unsigned");
+        value = calculate_str_in_binary_to_int(value_in_binary, "signed");
     }
-    unsigned int command, registr_1, value;
+    unsigned int command, registr_1; //u_int because cant be negative
+    int value; // int because can be negative
     string total_value;
 };
 
@@ -344,8 +373,7 @@ public :
         registr_1 = str_to_registr[parsed_line_in_assembler[1]];
         registr_2 = str_to_registr[parsed_line_in_assembler[2]];
         value = stoi(parsed_line_in_assembler[3]);
-        total_value = to_binary(command, 8) + to_binary(registr_1, 4) + to_binary(registr_2, 4) + to_binary(value, 16);
-
+        total_value = to_binary(command, 8, "unsigned") + to_binary(registr_1, 4, "unsigned") + to_binary(registr_2, 4, "unsigned") + to_binary(value, 16, "signed");
     }
     RR (string line_in_machine_code) {
         assert (line_in_machine_code.size() == 32);
@@ -365,12 +393,13 @@ public :
         assert (registr_1_in_binary.size() == 4);
         assert (registr_2_in_binary.size() == 4);
         assert (value_in_binary.size() == 16);
-        command = calculate_str_in_binary_to_int(command_in_binary);
-        registr_1 = calculate_str_in_binary_to_int(registr_1_in_binary);
-        registr_2 = calculate_str_in_binary_to_int(registr_2_in_binary);
-        value = calculate_str_in_binary_to_int(value_in_binary);
+        command = calculate_str_in_binary_to_int(command_in_binary, "unsigned");
+        registr_1 = calculate_str_in_binary_to_int(registr_1_in_binary, "unsigned");
+        registr_2 = calculate_str_in_binary_to_int(registr_2_in_binary, "unsigned");
+        value = calculate_str_in_binary_to_int(value_in_binary, "signed");
     }
-    unsigned int command, registr_1, registr_2, value;
+    unsigned int command, registr_1, registr_2; //u_int because cant be negative
+    int value; //int because can be negative
     string total_value;
 };
 
@@ -382,8 +411,9 @@ public :
         command = str_to_command[parsed_line_in_assembler[0]];
         registr = str_to_registr[parsed_line_in_assembler[1]];
         //it's always an address of a specific value in my_Emulator address space that's why we can just use stoi
+        assert (stoi(parsed_line_in_assembler[2]) >= 0);
         address = stoi(parsed_line_in_assembler[2]);
-        total_value = to_binary(command, 8) + to_binary(registr, 4) + to_binary(address, 20);
+        total_value = to_binary(command, 8, "unsigned") + to_binary(registr, 4, "unsigned") + to_binary(address, 20, "unsigned");
     }
     RM (string line_in_machine_code) {
         assert (line_in_machine_code.size() == 32);
@@ -400,11 +430,11 @@ public :
         assert (command_in_binary.size() == 8);
         assert (registr_in_binary.size() == 4);
         assert (address_in_binary.size() == 20);
-        command = calculate_str_in_binary_to_int(command_in_binary);
-        registr = calculate_str_in_binary_to_int(registr_in_binary);
-        address = calculate_str_in_binary_to_int(address_in_binary);
+        command = calculate_str_in_binary_to_int(command_in_binary, "unsigned");
+        registr = calculate_str_in_binary_to_int(registr_in_binary, "unsigned");
+        address = calculate_str_in_binary_to_int(address_in_binary, "unsigned");
     }
-    unsigned int command, registr, address;
+    unsigned int command, registr, address; //u_int because cant be negative
     string total_value;
 };
 
@@ -414,16 +444,17 @@ class J {
 public :
     J (vector <string> parsed_line_in_assembler) {
         command = str_to_command[parsed_line_in_assembler[0]];
-        //our a[1] can be a string (address space of my_Compiler) and it can be a number (address space of my_Emulator)
+        //our parsed_line_in_assembler[1] can be a string (address space of my_Compiler) and it can be a number (address space of my_Emulator)
         //if it's a number - it's an address of a specific value in my_Emulator address space
         if (parsed_line_in_assembler[1][0] >= '0' && parsed_line_in_assembler[1][0] <= '9') {
+            assert (stoi(parsed_line_in_assembler[1]) >= 0);
             address = stoi(parsed_line_in_assembler[1]);
         }
         //if it's a string - it's an address of function or marker in machine code
         else {
             address = map_for_functions_and_markers[parsed_line_in_assembler[1]];
         }
-        total_value = to_binary(command, 8) + "0000" + to_binary(address, 20);
+        total_value = to_binary(command, 8, "unsigned") + "0000" + to_binary(address, 20, "unsigned");
     }
     J (string line_in_machine_code) {
         assert (line_in_machine_code.size() == 32);
@@ -439,12 +470,15 @@ public :
         }
         assert (command_in_binary.size() == 8);
         assert (address_in_binary.size() == 20);
-        command = calculate_str_in_binary_to_int(command_in_binary);
-        address = calculate_str_in_binary_to_int(address_in_binary);
+        command = calculate_str_in_binary_to_int(command_in_binary, "unsigned");
+        address = calculate_str_in_binary_to_int(address_in_binary, "unsigned");
     }
-    unsigned int command, address;
+    unsigned int command, address; //u_int because cant be negative
     string total_value;
 };
+
+
+/////////////////////////////////////////////////////////// MY_COMPILER ///////////////////////////////////////////////////////////
 
 
 //+
@@ -452,7 +486,8 @@ void normalize (string& a) {
     while (a[0] == ' ') {
         a.erase(a.begin());
     }
-    while (a[a.size()-1] == ' ' || a[a.size()-1] == ':') {
+
+    while (a[a.size()-1] == ' ') {
         a.erase(a.begin() + a.size() - 1);
     }
 }
@@ -472,37 +507,130 @@ vector <string> parsing (string a) {
 
 //+
 string define_a_type (string a) {
+    string result;
+
     //at first we normalize our string
     normalize(a);
     //then we make parsing
-    vector<string>tokens = parsing(a);
-    if (tokens.size() == 3) {
-        //RM or RI
-        if (tokens[0] == "LOAD" || tokens[0] == "STORE" || tokens[0] == "LOAD2" || tokens[0] == "STORE2") {
-            return "RI";
-        } else {
-            return "RM";
-        }
-    } else if (tokens.size() == 4) {
-        return "RR";
-    } else if (tokens.size() == 1 || (tokens[0] == "end" && tokens[1] == "main")) {
-        return "functions_and_markers";
-    } else {
-        return "J";
+    vector <string> tokens = parsing(a);
+    //should have at least one word
+    if (tokens.size() == 0) {
+        return result;
     }
+
+    //we can have different results : simple_type(RR,RI,RM,J); function(func: ); directive(end, word); function+simple_type(func: cmpi r0 r1 2); function+directive(func: word)
+    string first_word = tokens[0];
+    //if first word function
+    if (first_word[first_word.size() - 1] == ':') {
+        //if we have just a function
+        if (tokens.size() == 1) {
+            result = "function";
+        }
+        //if we have word after function
+        else if (tokens[1] == "word"){
+            result = "function_plus_word";
+        }
+        //if we have end after function
+        else if (tokens[1] == "end"){
+            result = "function_plus_end";
+        }
+        //if we have simple type after function
+        else {
+            result = "function_plus_" + command_to_type_of_command[str_to_command[tokens[1]]];
+        }
+    }
+    //if first word not function
+    else {
+        //if we have word
+        if (tokens[0] == "word") {
+            result = "word";
+        }
+        //if we have end
+        else if (tokens[0] == "end") {
+             result = "end";
+        }
+        //if we have simple type
+        else {
+            result = command_to_type_of_command[str_to_command[tokens[0]]];
+        }
+    }
+
+    return result;
 }
 
 
 //+
-void declare_all_functions_and_markers (vector<string>& input_assembler) {
+//this function is cleaning our assembler code from everything we don't need + it declares functions and erases them
+void declare_func_plus_cleaning (vector<string>& input_assembler) {
+    // at first we will declare and erase all functions
     for (size_t i = 0; i < input_assembler.size(); i++) {
         string curr_line = input_assembler[i];
         normalize(curr_line);
         string type = define_a_type(curr_line);
-        if (type == "functions_and_markers") {
+
+        //if we have function - insert function in map and erase the line from the input;
+        if (type == "function") {
             map_for_functions_and_markers.insert({curr_line, i});
             input_assembler.erase(input_assembler.begin() + i);
             i--;
+        }
+
+        //if we have function_plus_something_else - insert function in map and erase ONLY function from the line;
+        else if (type == "function_plus_RI" || type == "function_plus_RR" || type == "function_plus_RM" || type == "function_plus_J" || type == "function_plus_word" || type == "function_plus_end") {
+            vector <string> parsed_line = parsing (curr_line);
+            map_for_functions_and_markers.insert({parsed_line[0], i});
+            parsed_line.erase(parsed_line.begin());
+            string modified_line;
+            for (size_t j = 0; j < parsed_line.size(); j++) {
+                modified_line += parsed_line[j] + " ";
+            }
+            normalize(modified_line);
+            input_assembler[i] = modified_line;
+        }
+
+        //else only not functions left
+        else {
+            assert(type == "RR" || type == "RI" || type == "RM" || type == "J" || type == "end" || type == "word");
+        }
+    }
+
+    //we should delete ":" from all functions in the map
+    for (auto i = map_for_functions_and_markers.begin(); i != map_for_functions_and_markers.end(); i++) {
+        string func = i -> first;
+        unsigned int address = i -> second;
+        if (func[func.size()-1] == ':') {
+            func.erase(func.begin() + func.size() - 1);
+            map_for_functions_and_markers.erase(i);
+            map_for_functions_and_markers.insert({func, address});
+        }
+    }
+
+    //and now we will do and erase the directives
+    for (size_t i = 0; i < input_assembler.size(); i++) {
+        string curr_line = input_assembler[i];
+        normalize(curr_line);
+        string type = define_a_type(curr_line);
+
+        //if we have "word" - do the "word"(ask tigran), erase the line;
+        if (type == "word") {
+            //do the "word"
+            //...
+            input_assembler.erase(input_assembler.begin() + i);
+            i--;
+        }
+
+
+        //if we have "end" - do the "end", erase the line;
+        else if (type == "end") {
+            vector <string> parsed_line = parsing (curr_line);
+            ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS = map_for_functions_and_markers[parsed_line[1]];
+            input_assembler.erase(input_assembler.begin() + i);
+            i--;
+        }
+
+        //only simple_types has left
+        else {
+            assert(type == "RR" || type == "RI" || type == "RM" || type == "J");
         }
     }
 }
@@ -512,14 +640,22 @@ void declare_all_functions_and_markers (vector<string>& input_assembler) {
 vector<string> to_machine_code (vector<string> input_assembler) {
     vector<string> output;
 
-    //at first we should declare all functions in our input and erase them so during the main pass we cant see them
-    declare_all_functions_and_markers(input_assembler);
+    //at first we should declare all functions and markers in our input and erase them so during the main pass we cant see them
+    //but we need to remember that we can have this type of syntax (lo : cmpi r2 10) so we don't delete the hole line in this case
+    declare_func_plus_cleaning (input_assembler);
+    //for checking
+    /*for (size_t i = 0; i < input_assembler.size(); i++) {
+        cout << define_a_type(input_assembler[i]) << " " <<input_assembler[i] << endl;
+    }
+    cout << "ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS : " << ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS << endl;*/
 
     for (size_t i = 0; i < input_assembler.size(); i++) {
         string curr_line = input_assembler[i];
         normalize(curr_line);
         string type = define_a_type(curr_line);
         vector <string> parsed_line = parsing(curr_line);
+        //I assume that this parsed line is one of the simple_type command because everything else we cleaned previously with function "declare_func_plus_cleaning ()"
+        assert(((type == "RM" || type == "RI") && parsed_line.size() == 3) || (type == "RR" && parsed_line.size() == 4) || (type == "J" && parsed_line.size() == 2));
         if (type == "RM") {
             RM curr_line_in_machine_code(parsed_line);
             output.push_back(curr_line_in_machine_code.total_value);
@@ -532,6 +668,8 @@ vector<string> to_machine_code (vector<string> input_assembler) {
         } else if (type == "J") {
             J curr_line_in_machine_code(parsed_line);
             output.push_back(curr_line_in_machine_code.total_value);
+        } else {
+            assert (0 == 1);
         }
     }
 
@@ -539,8 +677,8 @@ vector<string> to_machine_code (vector<string> input_assembler) {
 }
 
 
-//my_Compiler is a class that represents assembler transformation to machine code
 //+
+//my_Compiler is a class that represents assembler transformation to machine code
 class my_Compiler {
 public :
     my_Compiler (vector <string>);
@@ -556,9 +694,9 @@ my_Compiler :: my_Compiler (vector <string> input_assembler) {
     words = to_machine_code(input_assembler);
     //now we will add extra information to the start so our executive file will be pretty :)
     words.emplace(words.begin(),"start address of the stack : 10^8");
-    words.emplace(words.begin(),"number of the line where machine code starts : 7");
-    words.emplace(words.begin(),"size of the words : 32bits");
-    words.emplace(words.begin(),"size of the const : differs");
+    words.emplace(words.begin(),"address in my emulator where executing starts : " + to_string(ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS));
+    words.emplace(words.begin(),"size of the word : 32bit");
+    words.emplace(words.begin(),"size of the const : max 20bit");
     words.emplace(words.begin(),"size of the machine code : " +  to_string(words.size()-4));
     words.emplace(words.begin(),"ThisIsFUPM2Exec");
 }
@@ -567,10 +705,7 @@ my_Compiler :: my_Compiler (vector <string> input_assembler) {
 //+
 void my_Compiler :: Print () {
     for (size_t i = 0; i < words.size(); i++) {
-        if (i >= 6) {
-            cout << "address : " << i - 6<< "; word : ";
-        }
-        cout << words[i] << endl;
+        cout << "address in my_Compiler : " << i << ";      "<< words[i] << endl;
     }
 }
 
@@ -581,7 +716,7 @@ vector <string> my_Compiler :: return_words () {
 }
 
 
-/////////////////////////////////////////////////////////// THE SECOND PART ///////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////// MY_EMULATOR ///////////////////////////////////////////////////////////
 
 
 //+
@@ -604,7 +739,7 @@ private :
     unsigned int stack_pointer_registr;
     unsigned int counter_registr;
     bool flags;
-    unsigned int end_machine_code_pointer;
+    unsigned int end_machine_code_pointer; //we can also interpret this as an address of "end main"
     vector <string> Von_Neumann_Memory;
 };
 
@@ -625,24 +760,25 @@ my_Emulator :: my_Emulator (my_Compiler executive_file) : free_registrs(13,0), V
 
 //+
 void my_Emulator :: Print () {
-    cout << "free registers: " << endl;
+    cout << "free registers : " << endl;
     for (size_t i = 0; i < free_registrs.size(); i++) {
         cout << "                       " << free_registrs[i] << endl;
     }
-    cout << "frame-call register: " << endl;
+    cout << "frame-call register : " << endl;
     cout << "                       " << frame_call_registr << endl;
-    cout << "stack pointer register: " << endl;
+    cout << "stack pointer register : " << endl;
     cout << "                       " << stack_pointer_registr << endl;
-    cout << "counter register: " << endl;
+    cout << "counter register : " << endl;
     cout << "                       " << counter_registr << endl;
-    cout << "flag: " << endl;
+    cout << "flag : " << endl;
     cout << "                       " << flags << endl;
-    cout << "end machine code pointer: " << endl;
+    cout << "end machine code pointer : " << endl;
     cout << "                       " << end_machine_code_pointer << endl;
-    cout << "address space: " << endl;
+    cout << "address space : " << endl;
     for (size_t i = 0; i < 25; i++) {
-        cout << "                       " << Von_Neumann_Memory[i] << endl;
+        cout << "address in my_Emulator : " << i << ";      " << Von_Neumann_Memory[i] << endl;
     }
+    cout << "..." << endl;
 }
 
 
@@ -658,7 +794,7 @@ void my_Emulator :: Execute () {
         for (int i = 0; i < 8; i++) {
             command_in_binary += curr_line_in_binary[i];
         }
-        unsigned int command = calculate_str_in_binary_to_int(command_in_binary);
+        unsigned int command = calculate_str_in_binary_to_int(command_in_binary, "unsigned");
         string type = command_to_type_of_command[command];
 
         if (type == "RR") {
@@ -688,6 +824,7 @@ void my_Emulator :: Execute () {
                 //case 69 : storer (input_in_command); break;
                 //case 70 : loadr2 (input_in_command); break;
                 //case 71 : storer2 (input_in_command); break;
+                //default: assert (0 == 1);
             }
         } else if (type == "RI") {
             RI input_in_command (curr_line_in_binary);
@@ -708,8 +845,8 @@ void my_Emulator :: Execute () {
                 //case 23 : not (input_in_command); break;
                 //case 38 : push (input_in_command); break;
                 //case 39 : pop (input_in_command); break;
-                //case 42 : ret (input_in_command); break;
                 //case 44 : cmpi (input_in_command); break;
+                //default: assert (0 == 1);
             }
         } else if (type == "RM") {
             RM input_in_command (curr_line_in_binary);
@@ -719,12 +856,14 @@ void my_Emulator :: Execute () {
                 //case 65 : store (input_in_command); break;
                 //case 66 : load2 (input_in_command); break;
                 //case 67 : store2 (input_in_command); break;
+                //default: assert (0 == 1);
             }
         } else if (type == "J") {
             J input_in_command (curr_line_in_binary);
             //finally
             switch (command) {
                 //case 41 : calli (input_in_command); break;
+                //case 42 : ret (input_in_command); break;
                 //case 46 : jmp (input_in_command); break;
                 //case 47 : jne (input_in_command); break;
                 //case 48 : jeq (input_in_command); break;
@@ -732,16 +871,18 @@ void my_Emulator :: Execute () {
                 //case 50 : jl (input_in_command); break;
                 //case 51 : jge (input_in_command); break;
                 //case 52 : jg (input_in_command); break;
+                //default: assert (0 == 1);
             }
         } else {
-            cout << "Not appropriate type of the command in execute" << endl;
+            assert (0 == 1);
         }
+
         counter_registr++;
     }
 }
 
 
-/////////////////////////////////////////////////////////// THE THIRD PART ///////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////// FUNCTIONS ///////////////////////////////////////////////////////////
 
 
 //...
@@ -804,6 +945,9 @@ void my_Emulator :: addi (RI input) {
 }
 
 
+/////////////////////////////////////////////////////////// MAIN ///////////////////////////////////////////////////////////
+
+
 int main(int argc, char* argv[])
 {
     vector<string> input_assembler;
@@ -821,14 +965,16 @@ int main(int argc, char* argv[])
     my_Compiler executable_file(input_assembler);
     executable_file.Print();
     cout << endl;
+
     for (auto i : map_for_functions_and_markers) {
-        cout << i.first << " " << i.second << endl;
+        cout << "function : " << i.first << "; address of function in my_Emulator address space : " << i.second << endl;
     }
     cout << endl;
 
-    my_Emulator programm(executable_file);
-    programm.Print();
-    cout << endl;
-    programm.Execute();
+    //my_Emulator programm(executable_file);
+    //programm.Print();
+    //cout << endl;
+    //programm.Execute();
+
     return 0;
 }
