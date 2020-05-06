@@ -203,7 +203,7 @@ map <unsigned int, string> command_to_type_of_command  {
 {POP, "RI"},
 {CALL, "RR"},
 {CALLI, "J"},
-{RET, "J"}, // ATTENTION IT HAS TYPE RI IN THE PROBLEM
+{RET, "J"}, // ATTENTION IT HAS TYPE RI IN THE CLAUSE
 {CMP, "RR"},
 {CMPI, "RI"},
 {CMPD, "RR"},
@@ -232,7 +232,7 @@ map <string, unsigned int> map_for_functions_and_markers;
 
 //max size of the address space of my_Emulator
 //u_int because size cannot be negative
-const unsigned int MAX_SIZE = 10000001;
+const unsigned int MAX_SIZE = 1048575;
 
 
 //shows where we should start our executing
@@ -300,10 +300,10 @@ string to_binary (int value, unsigned int amount_of_bits, string type) {
 
 
 //+
-//int because we will send signed values to the function and I guarantee that I wont send anything bigger than int ([-2^19;2^20-1])
+//int because we will send signed values to the function and I guarantee that I wont send anything bigger than int/unsigned int
 int calculate_str_in_binary_to_int (string str_in_binary, string type) {
-    //check that we send only values in range [-2^19;2^20-1]
-    assert(str_in_binary.size() >= 16 && str_in_binary.size() <= 20);
+    //check that we send only values in range int/unsigned int
+    assert(str_in_binary.size() >= 4 && str_in_binary.size() <= 32);
     int res = 0;
     size_t i = 0;
 
@@ -611,7 +611,7 @@ void declare_func_plus_cleaning (vector<string>& input_assembler) {
         normalize(curr_line);
         string type = define_a_type(curr_line);
 
-        //if we have "word" - do the "word"(ask tigran), erase the line;
+        //if we have "word" - do the "word", erase the line;
         if (type == "word") {
             //do the "word"
             //...
@@ -727,6 +727,9 @@ public :
     void halt(RI input) ;
     void syscall(RI input);
     void addi (RI input);
+    void lc (RI input);
+    void mov (RR input);
+    void mul (RR input);
     //we should initialize address space when we send machine code to my_Emulator
     my_Emulator (my_Compiler);
     //program which executes machine code (should check with assert that my_Emulator is initialized)
@@ -734,24 +737,22 @@ public :
     //prints :)
     void Print ();
 private :
-    vector <unsigned int> free_registrs;
-    unsigned int frame_call_registr;
-    unsigned int stack_pointer_registr;
-    unsigned int counter_registr;
+    vector <unsigned int> registrs;
     bool flags;
-    unsigned int end_machine_code_pointer; //we can also interpret this as an address of "end main"
+    unsigned int end_machine_code_pointer; //address in my_Emulator where is the last line of the machine code
     vector <string> Von_Neumann_Memory;
 };
 
 
 //+
-my_Emulator :: my_Emulator (my_Compiler executive_file) : free_registrs(13,0), Von_Neumann_Memory(MAX_SIZE) {
-    stack_pointer_registr = MAX_SIZE - 1;
-    frame_call_registr = stack_pointer_registr;
-    counter_registr = 0;
+my_Emulator :: my_Emulator (my_Compiler executive_file) : registrs(16,0), Von_Neumann_Memory(MAX_SIZE) {
+    registrs[13] = MAX_SIZE;
+    registrs[14] = MAX_SIZE;
+    registrs[15] =  ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS;
     flags = false;
     vector <string> curr = executive_file.return_words();
-    end_machine_code_pointer = curr.size() - 6;
+    assert(curr.size() > 6);
+    end_machine_code_pointer = curr.size() - 1 - 6;
     for (size_t i = 6; i < curr.size(); i++) {
         Von_Neumann_Memory[i-6] = curr[i];
     }
@@ -761,16 +762,16 @@ my_Emulator :: my_Emulator (my_Compiler executive_file) : free_registrs(13,0), V
 //+
 void my_Emulator :: Print () {
     cout << "free registers : " << endl;
-    for (size_t i = 0; i < free_registrs.size(); i++) {
-        cout << "                       " << free_registrs[i] << endl;
+    for (size_t i = 0; i <= 12; i++) {
+        cout << "                       " << registrs[i] << endl;
     }
     cout << "frame-call register : " << endl;
-    cout << "                       " << frame_call_registr << endl;
+    cout << "                       " << registrs[13] << endl;
     cout << "stack pointer register : " << endl;
-    cout << "                       " << stack_pointer_registr << endl;
+    cout << "                       " << registrs[14] << endl;
     cout << "counter register : " << endl;
-    cout << "                       " << counter_registr << endl;
-    cout << "flag : " << endl;
+    cout << "                       " << registrs[15] << endl;
+    cout << "flags : " << endl;
     cout << "                       " << flags << endl;
     cout << "end machine code pointer : " << endl;
     cout << "                       " << end_machine_code_pointer << endl;
@@ -782,13 +783,13 @@ void my_Emulator :: Print () {
 }
 
 
-//...
+//+
 void my_Emulator :: Execute () {
     //at first we check if my_Emulator is initialized
-    assert (end_machine_code_pointer != 0);
+    assert (registrs[14] == MAX_SIZE);
 
-    while (counter_registr < end_machine_code_pointer) {
-        string curr_line_in_binary = Von_Neumann_Memory[counter_registr];
+    while (registrs[15] <= end_machine_code_pointer) {
+        string curr_line_in_binary = Von_Neumann_Memory[registrs[15]];
 
         string command_in_binary;
         for (int i = 0; i < 8; i++) {
@@ -803,14 +804,14 @@ void my_Emulator :: Execute () {
             switch (command) {
                 //case 2 : add (input_in_command); break;
                 //case 4 : sub (input_in_command); break;
-                //case 6 : mul (input_in_command); break;
+                case 6 : mul (input_in_command); break;
                 //case 8 : div (input_in_command); break;
                 //case 13 : shl (input_in_command); break;
                 //case 15 : shr (input_in_command); break;
                 //case 17 : and (input_in_command); break;
                 //case 19 : or (input_in_command); break;
                 //case 21 : xor (input_in_command); break;
-                //case 24 : mov (input_in_command); break;
+                case 24 : mov (input_in_command); break;
                 //case 32 : addd (input_in_command); break;
                 //case 33 : subq (input_in_command); break;
                 //case 34 : muld (input_in_command); break;
@@ -836,7 +837,7 @@ void my_Emulator :: Execute () {
                 //case 5 : subi (input_in_command); break;
                 //case 7 : muli (input_in_command); break;
                 //case 9 : divi (input_in_command); break;
-                //case 12 : lc (input_in_command); break;
+                case 12 : lc (input_in_command); break;
                 //case 14 : shli (input_in_command); break;
                 //case 16 : shri (input_in_command); break;
                 //case 18 : andi (input_in_command); break;
@@ -877,7 +878,7 @@ void my_Emulator :: Execute () {
             assert (0 == 1);
         }
 
-        counter_registr++;
+        registrs[15]++;
     }
 }
 
@@ -885,63 +886,106 @@ void my_Emulator :: Execute () {
 /////////////////////////////////////////////////////////// FUNCTIONS ///////////////////////////////////////////////////////////
 
 
-//...
-void my_Emulator :: halt (RI input) {
+//+
+unsigned int _32_low_bits_of_ull (unsigned long long int value) {
+    string ull_to_str (64,'0');
+    string a = positive_T_to_binary(value);
+    int j = 63;
+    for (int i = a.size() - 1; i >= 0; i--) {
+        ull_to_str[j] = a[i];
+        j--;
+    }
+    string _32_low_bits (32,'0');
+    for (int i = 32; i < 64; i++) {
+        _32_low_bits[i-32] = ull_to_str[i];
+    }
+    return calculate_str_in_binary_to_int(_32_low_bits, "unsigned");
+}
 
+
+//+
+unsigned int _32_high_bits_of_ull (unsigned long long int value) {
+    string ull_to_str (64,'0');
+    string a = positive_T_to_binary(value);
+    int j = 63;
+    for (int i = a.size() - 1; i >= 0; i--) {
+        ull_to_str[j] = a[i];
+        j--;
+    }
+    string _32_high_bits (32,'0');
+    for (int i = 0; i < 32; i++) {
+        _32_high_bits[i] = ull_to_str[i];
+    }
+    return calculate_str_in_binary_to_int(_32_high_bits, "unsigned");
+}
+
+
+//+
+void my_Emulator :: halt (RI input) {
+    //stop the executing by going to the end of the machine code
+    registrs[15] = end_machine_code_pointer + 1;
 }
 
 
 //...
 void my_Emulator :: syscall (RI input) {
-    if (input.value == 100) {
-        unsigned int a;
+    if (input.value == 0) {
+        //exit
+        halt(input);
+    } else if (input.value == 100) {
+        //scan int
+        int a;
         cin >> a;
-        //this doesn't look nice i ll fix this later
-        if (input.registr_1 >= 0 && input.registr_1 <= 12) {
-            free_registrs[input.registr_1] = a;
-        } else if (input.registr_1 == 13) {
-            frame_call_registr = a;
-        } else if (input.registr_1 == 14) {
-            stack_pointer_registr = a;
-        } else if (input.registr_1 == 15) {
-            counter_registr = a;
-        }
+        registrs[input.registr_1] = a;
     } else if (input.value == 101) {
+        //scan double
 
     } else if (input.value == 102) {
-        //the same
-        if (input.registr_1 >= 0 && input.registr_1 <= 12) {
-            cout << free_registrs[input.registr_1] << endl;
-        } else if (input.registr_1 == 13) {
-            cout << frame_call_registr << endl;
-        } else if (input.registr_1 == 14) {
-            cout << stack_pointer_registr << endl;
-        } else if (input.registr_1 == 15) {
-            cout << counter_registr << endl;
-        }
+        //print int
+        int a = registrs[input.registr_1];
+        cout << a;
     } else if (input.value == 103) {
+        //print double
 
     } else if (input.value == 104) {
-
+        //scan char
+        char a;
+        cin >> a;
+        registrs[input.registr_1] = a;
     } else if (input.value == 105) {
-
+        //print char
+        char a = registrs[input.registr_1];
+        cout << a;
     }
 }
 
 
 //+
 void my_Emulator :: addi (RI input) {
-    if (input.registr_1 >= 0 && input.registr_1 <= 12) {
-        free_registrs[input.registr_1] += input.value;
-    } else if (input.registr_1 == 13) {
-        frame_call_registr += input.value;
-    } else if (input.registr_1 == 14) {
-        stack_pointer_registr += input.value;
-    } else if (input.registr_1 == 15) {
-        counter_registr += input.value;
-    } else  {
-        cout << "something wrong with registers in addi function" << endl;
-    }
+    registrs[input.registr_1] += input.value;
+}
+
+
+//...
+void my_Emulator :: lc (RI input) {
+    //NOTE : we can have RI.value more than 2^20 when we send assembler code to my_Compiler. In this case we need to do something about it, for example, RI.value mod 2^20
+    registrs[input.registr_1] = input.value;
+}
+
+
+//+
+void my_Emulator :: mov (RR input) {
+    unsigned int b = registrs[input.registr_2] + input.value;
+    registrs[input.registr_1] = b;
+}
+
+
+//+
+void my_Emulator :: mul (RR input) {
+    unsigned long long int a = registrs[input.registr_1] * (registrs[input.registr_2] + input.value);
+    assert (input.registr_1 != 15);
+    registrs [input.registr_1] = _32_low_bits_of_ull (a);
+    registrs [input.registr_1 + 1] = _32_high_bits_of_ull (a);
 }
 
 
@@ -971,10 +1015,10 @@ int main(int argc, char* argv[])
     }
     cout << endl;
 
-    //my_Emulator programm(executable_file);
-    //programm.Print();
-    //cout << endl;
-    //programm.Execute();
+    my_Emulator programm(executable_file);
+    programm.Print();
+    cout << endl;
+    programm.Execute();
 
     return 0;
 }
