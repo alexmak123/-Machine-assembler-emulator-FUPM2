@@ -240,6 +240,9 @@ const unsigned int MAX_SIZE = 1048575;
 unsigned int ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS = 0;
 
 
+typedef unsigned long long int ull;
+
+
 /////////////////////////////////////////////////////////// COMMAND TYPES ///////////////////////////////////////////////////////////
 
 
@@ -303,7 +306,7 @@ string to_binary (int value, unsigned int amount_of_bits, string type) {
 //int because we will send signed values to the function and I guarantee that I wont send anything bigger than int/unsigned int
 int calculate_str_in_binary_to_int (string str_in_binary, string type) {
     //check that we send only values in range int/unsigned int
-    assert(str_in_binary.size() >= 4 && str_in_binary.size() <= 32);
+    assert(str_in_binary.size() <= 32);
     int res = 0;
     size_t i = 0;
 
@@ -334,6 +337,11 @@ int calculate_str_in_binary_to_int (string str_in_binary, string type) {
 //+
 class RI {
 public :
+    RI (unsigned int i_command, unsigned int i_registr_1, int i_value) {
+        command = i_command;
+        registr_1 = i_registr_1;
+        value = i_value;
+    }
     RI (vector <string> parsed_line_in_assembler) {
         command = str_to_command[parsed_line_in_assembler[0]];
         registr_1 = str_to_registr[parsed_line_in_assembler[1]];
@@ -368,6 +376,12 @@ public :
 //+
 class RR {
 public :
+    RR (unsigned int i_command, unsigned int i_registr_1, unsigned int i_registr_2, int i_value) {
+        command = i_command;
+        registr_1 = i_registr_1;
+        registr_2 = i_registr_2;
+        value = i_value;
+    }
     RR (vector <string> parsed_line_in_assembler) {
         command = str_to_command[parsed_line_in_assembler[0]];
         registr_1 = str_to_registr[parsed_line_in_assembler[1]];
@@ -407,6 +421,11 @@ public :
 //+
 class RM {
 public :
+    RM (unsigned int i_command, unsigned int i_registr, unsigned int i_address) {
+        command = i_command;
+        registr = i_registr;
+        address = i_address;
+    }
     RM (vector <string> parsed_line_in_assembler) {
         command = str_to_command[parsed_line_in_assembler[0]];
         registr = str_to_registr[parsed_line_in_assembler[1]];
@@ -442,6 +461,10 @@ public :
 //+
 class J {
 public :
+    J (unsigned int i_command, unsigned int i_address) {
+        command = i_command;
+        address = i_address;
+    }
     J (vector <string> parsed_line_in_assembler) {
         command = str_to_command[parsed_line_in_assembler[0]];
         //our parsed_line_in_assembler[1] can be a string (address space of my_Compiler) and it can be a number (address space of my_Emulator)
@@ -515,7 +538,7 @@ string define_a_type (string a) {
     vector <string> tokens = parsing(a);
     //should have at least one word
     if (tokens.size() == 0) {
-        return result;
+        assert (1 == 0);
     }
 
     //we can have different results : simple_type(RR,RI,RM,J); function(func: ); directive(end, word); function+simple_type(func: cmpi r0 r1 2); function+directive(func: word)
@@ -730,6 +753,12 @@ public :
     void lc (RI input);
     void mov (RR input);
     void mul (RR input);
+    void load (RM input);
+    void loadr (RR input);
+    void ret (J input);
+    void push (RI input);
+    void pop (RI input);
+    void calli (J input);
     //we should initialize address space when we send machine code to my_Emulator
     my_Emulator (my_Compiler);
     //program which executes machine code (should check with assert that my_Emulator is initialized)
@@ -737,7 +766,10 @@ public :
     //prints :)
     void Print ();
 private :
-    vector <unsigned int> registrs;
+    unsigned int registrs[16];
+    unsigned int * const counter_registr = &registrs[15];
+    unsigned int * const stack_registr = &registrs[14];
+    unsigned int * const frame_call_registr = &registrs[13];
     bool flags;
     unsigned int end_machine_code_pointer; //address in my_Emulator where is the last line of the machine code
     vector <string> Von_Neumann_Memory;
@@ -745,10 +777,13 @@ private :
 
 
 //+
-my_Emulator :: my_Emulator (my_Compiler executive_file) : registrs(16,0), Von_Neumann_Memory(MAX_SIZE) {
-    registrs[13] = MAX_SIZE;
-    registrs[14] = MAX_SIZE;
-    registrs[15] =  ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS;
+my_Emulator :: my_Emulator (my_Compiler executive_file) : Von_Neumann_Memory(MAX_SIZE) {
+    for (size_t i = 0; i < 16; i++) {
+        registrs [i] = 0;
+    }
+    *frame_call_registr = -1;
+    *stack_registr = MAX_SIZE;
+    *counter_registr =  ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS;
     flags = false;
     vector <string> curr = executive_file.return_words();
     assert(curr.size() > 6);
@@ -766,11 +801,11 @@ void my_Emulator :: Print () {
         cout << "                       " << registrs[i] << endl;
     }
     cout << "frame-call register : " << endl;
-    cout << "                       " << registrs[13] << endl;
+    cout << "                       " << *frame_call_registr << endl;
     cout << "stack pointer register : " << endl;
-    cout << "                       " << registrs[14] << endl;
+    cout << "                       " << *stack_registr << endl;
     cout << "counter register : " << endl;
-    cout << "                       " << registrs[15] << endl;
+    cout << "                       " << *counter_registr << endl;
     cout << "flags : " << endl;
     cout << "                       " << flags << endl;
     cout << "end machine code pointer : " << endl;
@@ -786,10 +821,10 @@ void my_Emulator :: Print () {
 //+
 void my_Emulator :: Execute () {
     //at first we check if my_Emulator is initialized
-    assert (registrs[14] == MAX_SIZE);
+    assert (*stack_registr == MAX_SIZE);
 
-    while (registrs[15] <= end_machine_code_pointer) {
-        string curr_line_in_binary = Von_Neumann_Memory[registrs[15]];
+    while (*counter_registr <= end_machine_code_pointer) {
+        string curr_line_in_binary = Von_Neumann_Memory[*counter_registr];
 
         string command_in_binary;
         for (int i = 0; i < 8; i++) {
@@ -821,11 +856,11 @@ void my_Emulator :: Execute () {
                 //case 40 : call (input_in_command); break;
                 //case 43 : cmp (input_in_command); break;
                 //case 45 : cmpd (input_in_command); break;
-                //case 68 : loadr (input_in_command); break;
+                case 68 : loadr (input_in_command); break;
                 //case 69 : storer (input_in_command); break;
                 //case 70 : loadr2 (input_in_command); break;
                 //case 71 : storer2 (input_in_command); break;
-                //default: assert (0 == 1);
+                throw ("RR command could not be found: " + command);
             }
         } else if (type == "RI") {
             RI input_in_command (curr_line_in_binary);
@@ -844,27 +879,27 @@ void my_Emulator :: Execute () {
                 //case 20 : ori (input_in_command); break;
                 //case 22 : xori (input_in_command); break;
                 //case 23 : not (input_in_command); break;
-                //case 38 : push (input_in_command); break;
-                //case 39 : pop (input_in_command); break;
+                case 38 : push (input_in_command); break;
+                case 39 : pop (input_in_command); break;
                 //case 44 : cmpi (input_in_command); break;
-                //default: assert (0 == 1);
+                throw ("RI command could not be found: " + command);
             }
         } else if (type == "RM") {
             RM input_in_command (curr_line_in_binary);
             //mmm some more cases
             switch (command) {
-                //case 64 : load (input_in_command); break;
+                case 64 : load (input_in_command); break;
                 //case 65 : store (input_in_command); break;
                 //case 66 : load2 (input_in_command); break;
                 //case 67 : store2 (input_in_command); break;
-                //default: assert (0 == 1);
+                throw ("RM command could not be found: " + command);
             }
         } else if (type == "J") {
             J input_in_command (curr_line_in_binary);
             //finally
             switch (command) {
-                //case 41 : calli (input_in_command); break;
-                //case 42 : ret (input_in_command); break;
+                case 41 : calli (input_in_command); break;
+                case 42 : ret (input_in_command); break;
                 //case 46 : jmp (input_in_command); break;
                 //case 47 : jne (input_in_command); break;
                 //case 48 : jeq (input_in_command); break;
@@ -872,13 +907,13 @@ void my_Emulator :: Execute () {
                 //case 50 : jl (input_in_command); break;
                 //case 51 : jge (input_in_command); break;
                 //case 52 : jg (input_in_command); break;
-                //default: assert (0 == 1);
+                throw ("J command could not be found: " + command);
             }
         } else {
             assert (0 == 1);
         }
 
-        registrs[15]++;
+        (*counter_registr)++ ;
     }
 }
 
@@ -887,7 +922,8 @@ void my_Emulator :: Execute () {
 
 
 //+
-unsigned int _32_low_bits_of_ull (unsigned long long int value) {
+//in my representation u_int (7) = 00000000000000000000000000000111
+unsigned int _32_low_bits_of_ull (ull value) {
     string ull_to_str (64,'0');
     string a = positive_T_to_binary(value);
     int j = 63;
@@ -904,7 +940,8 @@ unsigned int _32_low_bits_of_ull (unsigned long long int value) {
 
 
 //+
-unsigned int _32_high_bits_of_ull (unsigned long long int value) {
+//in my representation u_int (7) = 00000000000000000000000000000111
+unsigned int _32_high_bits_of_ull (ull value) {
     string ull_to_str (64,'0');
     string a = positive_T_to_binary(value);
     int j = 63;
@@ -920,10 +957,34 @@ unsigned int _32_high_bits_of_ull (unsigned long long int value) {
 }
 
 
+//...
+void my_Emulator :: push (RI input) {
+    //NOTE: in the clause it is said that we can modify machine code
+    assert (*stack_registr - 1 > end_machine_code_pointer);
+    *stack_registr -= 1;
+    unsigned int value = registrs[input.registr_1] + input.value;
+    Von_Neumann_Memory[*stack_registr] = positive_T_to_binary(value);
+}
+
+
+//+
+void my_Emulator :: pop (RI input) {
+    assert(*stack_registr < MAX_SIZE);
+    //extract number from the stack
+    unsigned int value_in_the_stack = calculate_str_in_binary_to_int (Von_Neumann_Memory[*stack_registr], "unsigned");
+    //clear the cell
+    Von_Neumann_Memory[*stack_registr].clear();
+    *stack_registr += 1;
+    //put the result into the register
+    unsigned int result_value = value_in_the_stack + input.value;
+    registrs [input.registr_1] = result_value;
+}
+
+
 //+
 void my_Emulator :: halt (RI input) {
     //stop the executing by going to the end of the machine code
-    registrs[15] = end_machine_code_pointer + 1;
+    *counter_registr = end_machine_code_pointer + 1;
 }
 
 
@@ -982,10 +1043,62 @@ void my_Emulator :: mov (RR input) {
 
 //+
 void my_Emulator :: mul (RR input) {
-    unsigned long long int a = registrs[input.registr_1] * (registrs[input.registr_2] + input.value);
+    ull f = registrs[input.registr_1], s = (registrs[input.registr_2] + input.value);
+    ull a = f * s;
     assert (input.registr_1 != 15);
     registrs [input.registr_1] = _32_low_bits_of_ull (a);
     registrs [input.registr_1 + 1] = _32_high_bits_of_ull (a);
+}
+
+
+//...
+void my_Emulator :: load (RM input) {
+    //NOTE: in the clause it is said that we can modify machine code
+    assert (input.address > end_machine_code_pointer && input.address < MAX_SIZE);
+    string cell_value_in_str_and_binary = Von_Neumann_Memory[input.address];
+    unsigned int cell_value = calculate_str_in_binary_to_int(cell_value_in_str_and_binary, "unsigned");
+    //copy cell value in register
+    registrs [input.registr] = cell_value;
+}
+
+
+//...
+void my_Emulator :: loadr (RR input) {
+    int address_in_int = registrs[input.registr_2] + input.value;
+    //NOTE: in the clause it is said that we can modify machine code
+
+    assert (address_in_int > end_machine_code_pointer && address_in_int < MAX_SIZE);
+    unsigned int address = registrs[input.registr_2] + input.value;
+    RM a(input.command, input.registr_1, address);
+    load(a);
+}
+
+
+//+
+void my_Emulator :: ret (J input) {
+    //at first we retrieve the return address from the stack in counter_register(r15).
+    //NOTE: I assume that when we see ret, in r14 is always the return address of the function we have called
+    //39 - code of the command pop ; 15 - code of r15; 0 - modifier of r15
+    RI a(39, 15, 0);
+    pop(a);
+    //then we delete "local variables" from the stack and input.address shows us how much of them we should delete
+    unsigned int amount_of_variables_we_should_delete_from_the_stack = input.address; //we should use "address" here because there is a mistake in the clause
+    for (int i = 0; i < amount_of_variables_we_should_delete_from_the_stack; i++) {
+        Von_Neumann_Memory[*stack_registr].clear();
+        *stack_registr += 1;
+    }
+}
+
+
+//...
+void my_Emulator :: calli (J input) {
+    //NOTE: in the clause it is said that we can go to address more than end_machine_code_pointer
+    assert (input.address >= 0 && input.address <= end_machine_code_pointer);
+    //push return address in the stack
+    RI a(38,15,0); //we push r15 without +1 because we make registrs[15]++; in the end of Execute ()
+    push (a);
+    //go to the address of function we call
+    *counter_registr = input.address - 1; // -1 because we make registrs[15]++; in the end of Execute ()
 }
 
 
