@@ -243,6 +243,9 @@ unsigned int ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS = 0;
 typedef unsigned long long int ull;
 
 
+ofstream out;
+
+
 /////////////////////////////////////////////////////////// COMMAND TYPES ///////////////////////////////////////////////////////////
 
 
@@ -510,7 +513,7 @@ void normalize (string& a) {
         a.erase(a.begin());
     }
 
-    while (a[a.size()-1] == ' ') {
+    while (a[a.size()-1] == ' ' || a[a.size()-1] == '\n') {
         a.erase(a.begin() + a.size() - 1);
     }
 }
@@ -589,6 +592,14 @@ void declare_func_plus_cleaning (vector<string>& input_assembler) {
     for (size_t i = 0; i < input_assembler.size(); i++) {
         string curr_line = input_assembler[i];
         normalize(curr_line);
+
+        if (curr_line.size() == 0) {
+            input_assembler.erase(input_assembler.begin() + i);
+            if (i >= input_assembler.size()) {
+                break;
+            }
+        }
+
         string type = define_a_type(curr_line);
 
         //if we have function - insert function in map and erase the line from the input;
@@ -1004,7 +1015,8 @@ void my_Emulator :: syscall (RI input) {
     } else if (input.value == 102) {
         //print int
         int a = registrs[input.registr_1];
-        cout << a;
+        out << a;
+        //cout << a;
     } else if (input.value == 103) {
         //print double
 
@@ -1016,7 +1028,8 @@ void my_Emulator :: syscall (RI input) {
     } else if (input.value == 105) {
         //print char
         char a = registrs[input.registr_1];
-        cout << a;
+        out << a;
+        //cout << a;
     }
 }
 
@@ -1083,7 +1096,7 @@ void my_Emulator :: ret (J input) {
     pop(a);
     //then we delete "local variables" from the stack and input.address shows us how much of them we should delete
     unsigned int amount_of_variables_we_should_delete_from_the_stack = input.address; //we should use "address" here because there is a mistake in the clause
-    for (int i = 0; i < amount_of_variables_we_should_delete_from_the_stack; i++) {
+    for (size_t i = 0; i < amount_of_variables_we_should_delete_from_the_stack; i++) {
         Von_Neumann_Memory[*stack_registr].clear();
         *stack_registr += 1;
     }
@@ -1109,6 +1122,7 @@ int main(int argc, char* argv[])
 {
     vector<string> input_assembler;
     string line;
+    out.open("output.txt");
 
     //we open file for reading and we fill in the vector with lines
     ifstream in("input.fasm.txt");
@@ -1120,17 +1134,17 @@ int main(int argc, char* argv[])
     in.close();
 
     my_Compiler executable_file(input_assembler);
-    executable_file.Print();
-    cout << endl;
+    //executable_file.Print();
+    //cout << endl;
 
-    for (auto i : map_for_functions_and_markers) {
-        cout << "function : " << i.first << "; address of function in my_Emulator address space : " << i.second << endl;
-    }
+    //for (auto i : map_for_functions_and_markers) {
+      // cout << "function : " << i.first << "; address of function in my_Emulator address space : " << i.second << endl;
+    //}
     cout << endl;
 
     my_Emulator programm(executable_file);
-    programm.Print();
-    cout << endl;
+    //programm.Print();
+    //cout << endl;
     programm.Execute();
 
     return 0;
