@@ -339,6 +339,13 @@ int calculate_str_in_binary_to_int (string str_in_binary, string type) {
     return res;
 }
 
+void print_vector_string (vector <string> a, string type) {
+    cout << type << " : ";
+    for (size_t i = 0; i < a.size(); i++) {
+        cout << a[i] << " ";
+    }
+    cout << endl;
+}
 
 //+
 class RI {
@@ -351,7 +358,15 @@ public :
     RI (vector <string> parsed_line_in_assembler) {
         command = str_to_command[parsed_line_in_assembler[0]];
         registr_1 = str_to_registr[parsed_line_in_assembler[1]];
-        value = stoi(parsed_line_in_assembler[2]);
+        if (parsed_line_in_assembler[2][0] >= '0' && parsed_line_in_assembler[2][0] <= '9') {
+            assert (stoi(parsed_line_in_assembler[2]) >= 0);
+            //print_vector_string(parsed_line_in_assembler, "RI");
+            value = stoi(parsed_line_in_assembler[2]);
+        }
+        //if it's a string - it's an address of function or marker in machine code
+        else {
+            value = map_for_functions_and_markers[parsed_line_in_assembler[2]];
+        }
         total_value = to_binary(command, 8, "unsigned") + to_binary(registr_1, 4, "unsigned") + to_binary(value, 20, "signed");
     }
     RI (string line_in_machine_code) {
@@ -392,6 +407,7 @@ public :
         command = str_to_command[parsed_line_in_assembler[0]];
         registr_1 = str_to_registr[parsed_line_in_assembler[1]];
         registr_2 = str_to_registr[parsed_line_in_assembler[2]];
+        //print_vector_string(parsed_line_in_assembler, "RR");
         value = stoi(parsed_line_in_assembler[3]);
         total_value = to_binary(command, 8, "unsigned") + to_binary(registr_1, 4, "unsigned") + to_binary(registr_2, 4, "unsigned") + to_binary(value, 16, "signed");
     }
@@ -437,6 +453,7 @@ public :
         registr = str_to_registr[parsed_line_in_assembler[1]];
         //it's always an address of a specific value in my_Emulator address space that's why we can just use stoi
         assert (stoi(parsed_line_in_assembler[2]) >= 0);
+        //print_vector_string(parsed_line_in_assembler, "RM");
         address = stoi(parsed_line_in_assembler[2]);
         total_value = to_binary(command, 8, "unsigned") + to_binary(registr, 4, "unsigned") + to_binary(address, 20, "unsigned");
     }
@@ -477,6 +494,7 @@ public :
         //if it's a number - it's an address of a specific value in my_Emulator address space
         if (parsed_line_in_assembler[1][0] >= '0' && parsed_line_in_assembler[1][0] <= '9') {
             assert (stoi(parsed_line_in_assembler[1]) >= 0);
+            //print_vector_string(parsed_line_in_assembler, "J");
             address = stoi(parsed_line_in_assembler[1]);
         }
         //if it's a string - it's an address of function or marker in machine code
@@ -584,6 +602,19 @@ string define_a_type (string a) {
     return result;
 }
 
+void delete_from_map_functions_with_colons_at_the_end () {
+    //colons = ":"
+    //we should delete ":" from all functions in the map
+    for (auto i = map_for_functions_and_markers.begin(); i != map_for_functions_and_markers.end(); i++) {
+        string func = i -> first;
+        unsigned int address = i -> second;
+        if (func[func.size()-1] == ':') {
+            func.erase(func.begin() + func.size() - 1);
+            map_for_functions_and_markers.erase(i);
+            map_for_functions_and_markers.insert({func, address});
+        }
+    }
+}
 
 //+
 //this function is cleaning our assembler code from everything we don't need + it declares functions and erases them
@@ -628,16 +659,7 @@ void declare_func_plus_cleaning (vector<string>& input_assembler) {
         }
     }
 
-    //we should delete ":" from all functions in the map
-    for (auto i = map_for_functions_and_markers.begin(); i != map_for_functions_and_markers.end(); i++) {
-        string func = i -> first;
-        unsigned int address = i -> second;
-        if (func[func.size()-1] == ':') {
-            func.erase(func.begin() + func.size() - 1);
-            map_for_functions_and_markers.erase(i);
-            map_for_functions_and_markers.insert({func, address});
-        }
-    }
+    delete_from_map_functions_with_colons_at_the_end ();
 
     //and now we will do and erase the directives
     for (size_t i = 0; i < input_assembler.size(); i++) {
@@ -665,6 +687,8 @@ void declare_func_plus_cleaning (vector<string>& input_assembler) {
             assert(type == "RR" || type == "RI" || type == "RM" || type == "J");
         }
     }
+
+    delete_from_map_functions_with_colons_at_the_end ();
 }
 
 
@@ -676,10 +700,10 @@ vector<string> to_machine_code (vector<string> input_assembler) {
     //but we need to remember that we can have this type of syntax (lo : cmpi r2 10) so we don't delete the hole line in this case
     declare_func_plus_cleaning (input_assembler);
     //for checking
-    /*for (size_t i = 0; i < input_assembler.size(); i++) {
-        cout << define_a_type(input_assembler[i]) << " " <<input_assembler[i] << endl;
+    for (size_t i = 0; i < input_assembler.size(); i++) {
+        cout << "index : " << i << " type : " << define_a_type(input_assembler[i]) << " " <<input_assembler[i] << endl;
     }
-    cout << "ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS : " << ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS << endl; */
+    cout << "ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS : " << ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS << endl;
 
     for (size_t i = 0; i < input_assembler.size(); i++) {
         string curr_line = input_assembler[i];
@@ -688,7 +712,7 @@ vector<string> to_machine_code (vector<string> input_assembler) {
         vector <string> parsed_line = parsing(curr_line);
         //I assume that this parsed line is one of the simple_type command because everything else we cleaned previously with function "declare_func_plus_cleaning ()"
         //cout << i << " : " << curr_line << endl;
-        assert(((type == "RM" || type == "RI") && parsed_line.size() == 3) || (type == "RR" && parsed_line.size() == 4) || (type == "J" && parsed_line.size() == 2) || (type == "word" && parsed_line.size() == 1));
+        assert(((type == "RM" || type == "RI") && parsed_line.size() == 3) || (type == "RR" && (parsed_line.size() == 3 || parsed_line.size() == 4)) || (type == "J" && parsed_line.size() == 2) || (type == "word" && parsed_line.size() == 1));
         if (type == "RM") {
             RM curr_line_in_machine_code(parsed_line);
             output.push_back(curr_line_in_machine_code.total_value);
@@ -696,6 +720,9 @@ vector<string> to_machine_code (vector<string> input_assembler) {
             RI curr_line_in_machine_code(parsed_line);
             output.push_back(curr_line_in_machine_code.total_value);
         } else if (type == "RR") {
+            if (parsed_line.size() == 3) {
+                parsed_line.push_back ("0");
+            }
             RR curr_line_in_machine_code(parsed_line);
             output.push_back(curr_line_in_machine_code.total_value);
         } else if (type == "J") {
@@ -872,7 +899,7 @@ void my_Emulator :: Print () {
     cout << "end machine code pointer : " << endl;
     cout << "                       " << end_machine_code_pointer << endl;
     cout << "address space : " << endl;
-    for (size_t i = 0; i < 25; i++) {
+    for (size_t i = 0; i < 58; i++) {
         cout << "address in my_Emulator : " << i << ";      " << Von_Neumann_Memory[i] << endl;
     }
     cout << "..." << endl;
@@ -978,7 +1005,7 @@ void my_Emulator :: Execute () {
         } else {
             assert (0 == 1);
         }
-
+        cout << *counter_registr << endl;
         (*counter_registr)++ ;
     }
 }
@@ -1070,7 +1097,7 @@ void my_Emulator :: pop (RI input) {
 //+
 void my_Emulator :: halt (RI input) {
     //stop the executing by going to the end of the machine code
-    *counter_registr = end_machine_code_pointer + 1;
+    *counter_registr = end_machine_code_pointer + 3;
 }
 
 
@@ -1158,7 +1185,7 @@ void my_Emulator :: lc (RI input) {
 
 //+
 void my_Emulator :: mov (RR input) {
-    unsigned int b = registrs[input.registr_2] + input.value;
+    int b = registrs[input.registr_2] + input.value;
     registrs[input.registr_1] = b;
 }
 
@@ -1395,7 +1422,7 @@ void my_Emulator :: calli (J input) {
 //+
 void my_Emulator :: call (RR input) {
     int address_in_int = registrs[input.registr_2] + input.value;
-    assert (address_in_int > end_machine_code_pointer && address_in_int < MAX_SIZE);
+    assert (address_in_int < MAX_SIZE);
     unsigned int address = address_in_int;
     J a(41, address);
     calli (a);
@@ -1421,9 +1448,18 @@ void my_Emulator :: cmpi (RI input) {
 
 //+
 void my_Emulator :: cmp (RR input) {
-    int value = registrs[input.registr_2] + input.value;
-    RI a(44, input.registr_1, value);
-    cmpi(a);
+    unsigned int first = registrs[input.registr_1];
+    int second = registrs[input.registr_2] + input.value;
+    *equal_flag = 0, *more_flag = 0, *less_flag = 0;
+    if (first == second) {
+        *equal_flag = 1;
+    }
+    if (first > second) {
+        *more_flag = 1;
+    }
+    if (first < second) {
+        *less_flag = 1;
+    }
 }
 
 
@@ -1602,7 +1638,7 @@ int main(int argc, char* argv[])
     out.open("output.txt");
 
     //we open file for reading and we fill in the vector with lines
-    ifstream in("input.fasm");
+    ifstream in("input.fasm.txt");
     if (in.is_open()) {
         while (getline(in, line)) {
            input_assembler.push_back(line);
@@ -1611,16 +1647,16 @@ int main(int argc, char* argv[])
     in.close();
 
     my_Compiler executable_file(input_assembler);
-    //executable_file.Print();
-    //cout << endl;
+    executable_file.Print();
+    cout << endl;
 
-    //for (auto i : map_for_functions_and_markers) {
-      // cout << "function : " << i.first << "; address of function in my_Emulator address space : " << i.second << endl;
-    //}
-    //cout << endl;
+    for (auto i : map_for_functions_and_markers) {
+       cout << "function : " << i.first << "; address of function in my_Emulator address space : " << i.second << endl;
+    }
+    cout << endl;
 
     my_Emulator programm(executable_file);
-    //programm.Print();
+    programm.Print();
     //cout << endl;
     programm.Execute();
     out.close();
