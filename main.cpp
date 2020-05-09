@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <math.h>
 #include <limits.h>
+#include <iterator>
 using namespace std;
 
 
@@ -511,7 +512,7 @@ public :
 
 //+
 void normalize (string& a) {
-    while (a[0] == ' ' || a[0] == ';') {
+    while (a[0] == ' ' || a[0] == ';' || a[0] == '\t') {
         a.erase(a.begin());
     }
 
@@ -523,12 +524,9 @@ void normalize (string& a) {
 
 //+
 vector <string> parsing (string a) {
-    stringstream ss(a);
-    string item;
-    vector<string> tokens;
-    while (getline(ss, item, ' ')) {
-        tokens.push_back(item);
-    }
+    istringstream input_stream(a);
+    vector<string> tokens{istream_iterator<string>{input_stream},
+                      istream_iterator<string>{}};
     return tokens;
 }
 
@@ -681,7 +679,7 @@ vector<string> to_machine_code (vector<string> input_assembler) {
     /*for (size_t i = 0; i < input_assembler.size(); i++) {
         cout << define_a_type(input_assembler[i]) << " " <<input_assembler[i] << endl;
     }
-    cout << "ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS : " << ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS << endl;*/
+    cout << "ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS : " << ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS << endl; */
 
     for (size_t i = 0; i < input_assembler.size(); i++) {
         string curr_line = input_assembler[i];
@@ -689,6 +687,7 @@ vector<string> to_machine_code (vector<string> input_assembler) {
         string type = define_a_type(curr_line);
         vector <string> parsed_line = parsing(curr_line);
         //I assume that this parsed line is one of the simple_type command because everything else we cleaned previously with function "declare_func_plus_cleaning ()"
+        //cout << i << " : " << curr_line << endl;
         assert(((type == "RM" || type == "RI") && parsed_line.size() == 3) || (type == "RR" && parsed_line.size() == 4) || (type == "J" && parsed_line.size() == 2) || (type == "word" && parsed_line.size() == 1));
         if (type == "RM") {
             RM curr_line_in_machine_code(parsed_line);
@@ -1198,13 +1197,13 @@ void my_Emulator :: div (RR input) {
 
 //...
 void my_Emulator :: shl (RR input) {
-    registrs[input.registr_1] << registrs[input.registr_2] + input.value;
+    registrs[input.registr_1] = registrs[input.registr_1] << registrs[input.registr_2] + input.value;
 }
 
 
 //...
 void my_Emulator :: shli (RI input) {
-    registrs[input.registr_1] << input.value;
+    registrs[input.registr_1] = registrs[input.registr_1] << input.value;
 }
 
 
@@ -1214,7 +1213,7 @@ void my_Emulator :: shr (RR input) {
         registrs[input.registr_1] = 0;
     }
     else {
-        registrs[input.registr_1] >> registrs[input.registr_2] + input.value;
+        registrs[input.registr_1] = registrs[input.registr_1] >> registrs[input.registr_2] + input.value;
     }
 }
 
@@ -1225,7 +1224,7 @@ void my_Emulator :: shri (RI input) {
         registrs[input.registr_1] = 0;
     }
     else {
-        registrs[input.registr_1] >> input.value;
+        registrs[input.registr_1] = registrs[input.registr_1] >> input.value;
     }
 }
 
@@ -1603,7 +1602,7 @@ int main(int argc, char* argv[])
     out.open("output.txt");
 
     //we open file for reading and we fill in the vector with lines
-    ifstream in("input.fasm.txt");
+    ifstream in("input.fasm");
     if (in.is_open()) {
         while (getline(in, line)) {
            input_assembler.push_back(line);
