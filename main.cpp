@@ -109,6 +109,7 @@ LOADR = 68,
 LOADR2 = 69,
 STORER = 70,
 STORER2 = 71,
+WORD = 72,
 };
 
 
@@ -165,6 +166,7 @@ map <string, command_code> str_to_command  {
 {"loadr2",LOADR2},
 {"storer",STORER},
 {"storer2",STORER2},
+{"word", WORD},
 };
 
 
@@ -509,11 +511,11 @@ public :
 
 //+
 void normalize (string& a) {
-    while (a[0] == ' ') {
+    while (a[0] == ' ' || a[0] == ';') {
         a.erase(a.begin());
     }
 
-    while (a[a.size()-1] == ' ' || a[a.size()-1] == '\n') {
+    while (a[a.size()-1] == ' ' || a[a.size()-1] == '\n' || a[a.size()-1] == ';') {
         a.erase(a.begin() + a.size() - 1);
     }
 }
@@ -648,10 +650,7 @@ void declare_func_plus_cleaning (vector<string>& input_assembler) {
 
         //if we have "word" - do the "word", erase the line;
         if (type == "word") {
-            //do the "word"
-            //...
-            input_assembler.erase(input_assembler.begin() + i);
-            i--;
+            //WE DO NOTHING
         }
 
 
@@ -690,7 +689,7 @@ vector<string> to_machine_code (vector<string> input_assembler) {
         string type = define_a_type(curr_line);
         vector <string> parsed_line = parsing(curr_line);
         //I assume that this parsed line is one of the simple_type command because everything else we cleaned previously with function "declare_func_plus_cleaning ()"
-        assert(((type == "RM" || type == "RI") && parsed_line.size() == 3) || (type == "RR" && parsed_line.size() == 4) || (type == "J" && parsed_line.size() == 2));
+        assert(((type == "RM" || type == "RI") && parsed_line.size() == 3) || (type == "RR" && parsed_line.size() == 4) || (type == "J" && parsed_line.size() == 2) || (type == "word" && parsed_line.size() == 1));
         if (type == "RM") {
             RM curr_line_in_machine_code(parsed_line);
             output.push_back(curr_line_in_machine_code.total_value);
@@ -703,6 +702,9 @@ vector<string> to_machine_code (vector<string> input_assembler) {
         } else if (type == "J") {
             J curr_line_in_machine_code(parsed_line);
             output.push_back(curr_line_in_machine_code.total_value);
+        } else if (type == "word") {
+            string code_of_word_in_binary = "01001000";
+            output.push_back(code_of_word_in_binary);
         } else {
             assert (0 == 1);
         }
@@ -811,6 +813,7 @@ public :
     void divd (RR input);
     void itod (RR input);
     void dtoi (RR input);
+    void word ();
     //we should initialize address space when we send machine code to my_Emulator
     my_Emulator (my_Compiler);
     //program which executes machine code (should check with assert that my_Emulator is initialized)
@@ -968,6 +971,11 @@ void my_Emulator :: Execute () {
                 case 52 : jg (input_in_command); break;
                 throw ("J command could not be found: " + command);
             }
+        } else if (type == "word"){
+            switch (command) {
+                case 72 : word(); break;
+                throw ("word command could not be found: " + command);
+            }
         } else {
             assert (0 == 1);
         }
@@ -1030,6 +1038,11 @@ ull merge_two_u_int_to_ull (unsigned int high_bits, unsigned int low_bits) {
     return res;
 }
 
+
+//+
+void my_Emulator :: word () {
+    //we do nothing
+}
 
 //...
 void my_Emulator :: push (RI input) {
@@ -1590,7 +1603,7 @@ int main(int argc, char* argv[])
     out.open("output.txt");
 
     //we open file for reading and we fill in the vector with lines
-    ifstream in("input.fasm");
+    ifstream in("input.fasm.txt");
     if (in.is_open()) {
         while (getline(in, line)) {
            input_assembler.push_back(line);
