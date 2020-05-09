@@ -643,6 +643,7 @@ void declare_func_plus_cleaning (vector<string>& input_assembler) {
     for (size_t i = 0; i < input_assembler.size(); i++) {
         string curr_line = input_assembler[i];
         normalize(curr_line);
+
         string type = define_a_type(curr_line);
 
         //if we have "word" - do the "word", erase the line;
@@ -770,6 +771,46 @@ public :
     void push (RI input);
     void pop (RI input);
     void calli (J input);
+    void cmp (RR input);
+    void call (RR input);
+    void cmpi (RI input);
+    void cmpd (RR input);
+    void jmp (J input);
+    void jne (J input);
+    void jeq (J input);
+    void jle (J input);
+    void jl (J input);
+    void jge (J input);
+    void jg (J input);
+    void store (RM input);
+    void storer (RR input);
+    void load2 (RM input);
+    void store2 (RM input);
+    void loadr2 (RR input);
+    void storer2 (RR input);
+    void add (RR input);
+    void sub (RR input);
+    void subi (RI input);
+    void muli (RI input);
+    void div (RR input);
+    void divi (RI input);
+    void shl (RR input);
+    void shli (RI input);
+    void shr (RR input);
+    void shri (RI input);
+    void my_and (RR input);
+    void andi (RI input);
+    void ori (RI input);
+    void my_or (RR input);
+    void my_xor (RR input);
+    void xori (RI input);
+    void my_not (RI input);
+    void addd (RR input);
+    void subd (RR input);
+    void muld (RR input);
+    void divd (RR input);
+    void itod (RR input);
+    void dtoi (RR input);
     //we should initialize address space when we send machine code to my_Emulator
     my_Emulator (my_Compiler);
     //program which executes machine code (should check with assert that my_Emulator is initialized)
@@ -781,7 +822,10 @@ private :
     unsigned int * const counter_registr = &registrs[15];
     unsigned int * const stack_registr = &registrs[14];
     unsigned int * const frame_call_registr = &registrs[13];
-    bool flags;
+    bool flags[3];
+    bool * const equal_flag = &flags[0];
+    bool * const more_flag = &flags[1];
+    bool * const less_flag = &flags[2];
     unsigned int end_machine_code_pointer; //address in my_Emulator where is the last line of the machine code
     vector <string> Von_Neumann_Memory;
 };
@@ -795,7 +839,9 @@ my_Emulator :: my_Emulator (my_Compiler executive_file) : Von_Neumann_Memory(MAX
     *frame_call_registr = -1;
     *stack_registr = MAX_SIZE;
     *counter_registr =  ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS;
-    flags = false;
+    *equal_flag = 0;
+    *more_flag = 0;
+    *less_flag = 0;
     vector <string> curr = executive_file.return_words();
     assert(curr.size() > 6);
     end_machine_code_pointer = curr.size() - 1 - 6;
@@ -818,7 +864,9 @@ void my_Emulator :: Print () {
     cout << "counter register : " << endl;
     cout << "                       " << *counter_registr << endl;
     cout << "flags : " << endl;
-    cout << "                       " << flags << endl;
+    cout << "                        equal_flag : " << *equal_flag << endl;
+    cout << "                        more_flag : " << *more_flag << endl;
+    cout << "                        less_flag : " << *equal_flag << endl;
     cout << "end machine code pointer : " << endl;
     cout << "                       " << end_machine_code_pointer << endl;
     cout << "address space : " << endl;
@@ -848,29 +896,29 @@ void my_Emulator :: Execute () {
             RR input_in_command (curr_line_in_binary);
             //some cases
             switch (command) {
-                //case 2 : add (input_in_command); break;
-                //case 4 : sub (input_in_command); break;
+                case 2 : add (input_in_command); break;
+                case 4 : sub (input_in_command); break;
                 case 6 : mul (input_in_command); break;
-                //case 8 : div (input_in_command); break;
-                //case 13 : shl (input_in_command); break;
-                //case 15 : shr (input_in_command); break;
-                //case 17 : and (input_in_command); break;
-                //case 19 : or (input_in_command); break;
-                //case 21 : xor (input_in_command); break;
+                case 8 : div (input_in_command); break;
+                case 13 : shl (input_in_command); break;
+                case 15 : shr (input_in_command); break;
+                case 17 : my_and (input_in_command); break;
+                case 19 : my_or (input_in_command); break;
+                case 21 : my_xor (input_in_command); break;
                 case 24 : mov (input_in_command); break;
-                //case 32 : addd (input_in_command); break;
-                //case 33 : subq (input_in_command); break;
-                //case 34 : muld (input_in_command); break;
-                //case 35 : divd (input_in_command); break;
-                //case 36 : itod (input_in_command); break;
-                //case 37 : dtoi (input_in_command); break;
-                //case 40 : call (input_in_command); break;
-                //case 43 : cmp (input_in_command); break;
-                //case 45 : cmpd (input_in_command); break;
+                case 32 : addd (input_in_command); break;
+                case 33 : subd (input_in_command); break;
+                case 34 : muld (input_in_command); break;
+                case 35 : divd (input_in_command); break;
+                case 36 : itod (input_in_command); break;
+                case 37 : dtoi (input_in_command); break;
+                case 40 : call (input_in_command); break;
+                case 43 : cmp (input_in_command); break;
+                case 45 : cmpd (input_in_command); break;
                 case 68 : loadr (input_in_command); break;
-                //case 69 : storer (input_in_command); break;
-                //case 70 : loadr2 (input_in_command); break;
-                //case 71 : storer2 (input_in_command); break;
+                case 69 : storer (input_in_command); break;
+                case 70 : loadr2 (input_in_command); break;
+                case 71 : storer2 (input_in_command); break;
                 throw ("RR command could not be found: " + command);
             }
         } else if (type == "RI") {
@@ -880,19 +928,19 @@ void my_Emulator :: Execute () {
                 case 0 : halt (input_in_command); break;
                 case 1 : syscall (input_in_command); break;
                 case 3 : addi (input_in_command); break;
-                //case 5 : subi (input_in_command); break;
-                //case 7 : muli (input_in_command); break;
-                //case 9 : divi (input_in_command); break;
+                case 5 : subi (input_in_command); break;
+                case 7 : muli (input_in_command); break;
+                case 9 : divi (input_in_command); break;
                 case 12 : lc (input_in_command); break;
-                //case 14 : shli (input_in_command); break;
-                //case 16 : shri (input_in_command); break;
-                //case 18 : andi (input_in_command); break;
-                //case 20 : ori (input_in_command); break;
-                //case 22 : xori (input_in_command); break;
-                //case 23 : not (input_in_command); break;
+                case 14 : shli (input_in_command); break;
+                case 16 : shri (input_in_command); break;
+                case 18 : andi (input_in_command); break;
+                case 20 : ori (input_in_command); break;
+                case 22 : xori (input_in_command); break;
+                case 23 : my_not (input_in_command); break;
                 case 38 : push (input_in_command); break;
                 case 39 : pop (input_in_command); break;
-                //case 44 : cmpi (input_in_command); break;
+                case 44 : cmpi (input_in_command); break;
                 throw ("RI command could not be found: " + command);
             }
         } else if (type == "RM") {
@@ -900,9 +948,9 @@ void my_Emulator :: Execute () {
             //mmm some more cases
             switch (command) {
                 case 64 : load (input_in_command); break;
-                //case 65 : store (input_in_command); break;
-                //case 66 : load2 (input_in_command); break;
-                //case 67 : store2 (input_in_command); break;
+                case 65 : store (input_in_command); break;
+                case 66 : load2 (input_in_command); break;
+                case 67 : store2 (input_in_command); break;
                 throw ("RM command could not be found: " + command);
             }
         } else if (type == "J") {
@@ -911,13 +959,13 @@ void my_Emulator :: Execute () {
             switch (command) {
                 case 41 : calli (input_in_command); break;
                 case 42 : ret (input_in_command); break;
-                //case 46 : jmp (input_in_command); break;
-                //case 47 : jne (input_in_command); break;
-                //case 48 : jeq (input_in_command); break;
-                //case 49 : jle (input_in_command); break;
-                //case 50 : jl (input_in_command); break;
-                //case 51 : jge (input_in_command); break;
-                //case 52 : jg (input_in_command); break;
+                case 46 : jmp (input_in_command); break;
+                case 47 : jne (input_in_command); break;
+                case 48 : jeq (input_in_command); break;
+                case 49 : jle (input_in_command); break;
+                case 50 : jl (input_in_command); break;
+                case 51 : jge (input_in_command); break;
+                case 52 : jg (input_in_command); break;
                 throw ("J command could not be found: " + command);
             }
         } else {
@@ -930,6 +978,13 @@ void my_Emulator :: Execute () {
 
 
 /////////////////////////////////////////////////////////// FUNCTIONS ///////////////////////////////////////////////////////////
+
+
+//+
+union from_ull_to_double_and_back {
+    double dValue;
+    uint64_t iValue;
+};
 
 
 //+
@@ -968,6 +1023,14 @@ unsigned int _32_high_bits_of_ull (ull value) {
 }
 
 
+//+
+ull merge_two_u_int_to_ull (unsigned int high_bits, unsigned int low_bits) {
+    ull res;
+    res = ull (high_bits * pow(2,32)) + ull (low_bits);
+    return res;
+}
+
+
 //...
 void my_Emulator :: push (RI input) {
     //NOTE: in the clause it is said that we can modify machine code
@@ -999,7 +1062,7 @@ void my_Emulator :: halt (RI input) {
 }
 
 
-//...
+//+-
 void my_Emulator :: syscall (RI input) {
     if (input.value == 0) {
         //exit
@@ -1011,14 +1074,30 @@ void my_Emulator :: syscall (RI input) {
         registrs[input.registr_1] = a;
     } else if (input.value == 101) {
         //scan double
+        double a;
+        cin >> a;
+        from_ull_to_double_and_back b;
+        b.iValue = a;
+        ull double_in_ull = b.iValue;
+        registrs[input.registr_1] = _32_low_bits_of_ull(double_in_ull);
+        assert(input.registr_1 + 1 >= 1 && input.registr_1 + 1 < 16);
+        registrs[input.registr_1 + 1] = _32_high_bits_of_ull(double_in_ull);
 
     } else if (input.value == 102) {
         //print int
         int a = registrs[input.registr_1];
         out << a;
-        //cout << a;
+        cout << a;
     } else if (input.value == 103) {
         //print double
+        double res;
+        assert(input.registr_1 + 1 >= 1 && input.registr_1 + 1 < 16);
+        ull merged = merge_two_u_int_to_ull(registrs[input.registr_1 + 1], registrs[input.registr_1]);
+        from_ull_to_double_and_back a;
+        a.dValue = merged;
+        res = a.dValue;
+        out << res;
+        cout << res;
 
     } else if (input.value == 104) {
         //scan char
@@ -1029,7 +1108,7 @@ void my_Emulator :: syscall (RI input) {
         //print char
         char a = registrs[input.registr_1];
         out << a;
-        //cout << a;
+        cout << a;
     }
 }
 
@@ -1037,6 +1116,24 @@ void my_Emulator :: syscall (RI input) {
 //+
 void my_Emulator :: addi (RI input) {
     registrs[input.registr_1] += input.value;
+}
+
+
+//+
+void my_Emulator :: add (RR input) {
+    registrs[input.registr_1] += registrs [input.registr_2] + input.value;
+}
+
+
+//+
+void my_Emulator :: subi (RI input) {
+    registrs[input.registr_1] -= input.value;
+}
+
+
+//+
+void my_Emulator :: sub (RR input) {
+    registrs[input.registr_1] -= (registrs[input.registr_2] + input.value);
 }
 
 
@@ -1064,26 +1161,194 @@ void my_Emulator :: mul (RR input) {
 }
 
 
-//...
-void my_Emulator :: load (RM input) {
-    //NOTE: in the clause it is said that we can modify machine code
-    assert (input.address > end_machine_code_pointer && input.address < MAX_SIZE);
-    string cell_value_in_str_and_binary = Von_Neumann_Memory[input.address];
-    unsigned int cell_value = calculate_str_in_binary_to_int(cell_value_in_str_and_binary, "unsigned");
-    //copy cell value in register
-    registrs [input.registr] = cell_value;
+//+
+void my_Emulator :: divi (RI input) {
+    assert (input.registr_1 != 15);
+    ull first_operand = merge_two_u_int_to_ull(registrs[input.registr_1 + 1], registrs[input.registr_1]);
+    ull second_operand = input.value;
+    unsigned int div_result = first_operand / second_operand, mod_result = first_operand % second_operand;
+    registrs[input.registr_1] = div_result;
+    registrs[input.registr_1 + 1] = mod_result;
+}
+
+
+//+
+void my_Emulator :: div (RR input) {
+    assert (input.registr_1 != 15);
+    ull first_operand = merge_two_u_int_to_ull(registrs[input.registr_1 + 1], registrs[input.registr_1]);
+    ull second_operand = registrs[input.registr_2] + input.value;
+    unsigned int div_result = first_operand / second_operand, mod_result = first_operand % second_operand;
+    registrs[input.registr_1] = div_result;
+    registrs[input.registr_1 + 1] = mod_result;
 }
 
 
 //...
-void my_Emulator :: loadr (RR input) {
-    int address_in_int = registrs[input.registr_2] + input.value;
-    //NOTE: in the clause it is said that we can modify machine code
+void my_Emulator :: shl (RR input) {
+    registrs[input.registr_1] << registrs[input.registr_2] + input.value;
+}
 
-    assert (address_in_int > end_machine_code_pointer && address_in_int < MAX_SIZE);
-    unsigned int address = registrs[input.registr_2] + input.value;
-    RM a(input.command, input.registr_1, address);
-    load(a);
+
+//...
+void my_Emulator :: shli (RI input) {
+    registrs[input.registr_1] << input.value;
+}
+
+
+//...
+void my_Emulator :: shr (RR input) {
+    if (registrs[input.registr_2] + input.value >= 32) {
+        registrs[input.registr_1] = 0;
+    }
+    else {
+        registrs[input.registr_1] >> registrs[input.registr_2] + input.value;
+    }
+}
+
+
+//...
+void my_Emulator :: shri (RI input) {
+    if (input.value >= 32) {
+        registrs[input.registr_1] = 0;
+    }
+    else {
+        registrs[input.registr_1] >> input.value;
+    }
+}
+
+
+//+
+void my_Emulator :: andi (RI input) {
+    registrs[input.registr_1] = registrs[input.registr_1] & input.value;
+}
+
+
+//+
+void my_Emulator :: my_and (RR input) {
+    registrs[input.registr_1] = registrs[input.registr_1] & (registrs[input.registr_2] + input.value);
+}
+
+
+//+
+void my_Emulator :: ori (RI input) {
+    registrs[input.registr_1] = registrs[input.registr_1] | input.value;
+}
+
+
+//+
+void my_Emulator :: my_or (RR input) {
+    registrs[input.registr_1] = registrs[input.registr_1] | (registrs[input.registr_2] + input.value);
+}
+
+
+//+
+void my_Emulator :: xori (RI input) {
+    registrs[input.registr_1] = registrs[input.registr_1] ^ input.value;
+}
+
+
+//+
+void my_Emulator :: my_xor (RR input) {
+    registrs[input.registr_1] = registrs[input.registr_1] ^ (registrs[input.registr_2] + input.value);
+}
+
+
+//+
+void my_Emulator :: my_not (RI input) {
+    registrs[input.registr_1] = ~registrs[input.registr_1];
+}
+
+
+//+
+void my_Emulator :: addd (RR input) {
+    ull first_operand_in_ull = merge_two_u_int_to_ull(registrs[input.registr_1 + 1], registrs[input.registr_1]), second_operand_in_ull = merge_two_u_int_to_ull(registrs[input.registr_2 + 1], registrs[input.registr_2]);
+    from_ull_to_double_and_back a,b;
+    a.dValue = first_operand_in_ull;
+    b.dValue = second_operand_in_ull;
+    double first_operand_in_double = a.dValue;
+    double second_operand_in_double = b.dValue;
+    first_operand_in_double += second_operand_in_double + input.value;
+    a.iValue = first_operand_in_double;
+    ull res_in_ull = a.iValue;
+    registrs[input.registr_1 + 1] = _32_high_bits_of_ull(res_in_ull);
+    registrs[input.registr_1] = _32_low_bits_of_ull(res_in_ull);
+}
+
+
+//+
+void my_Emulator :: subd (RR input) {
+    ull first_operand_in_ull = merge_two_u_int_to_ull(registrs[input.registr_1 + 1], registrs[input.registr_1]), second_operand_in_ull = merge_two_u_int_to_ull(registrs[input.registr_2 + 1], registrs[input.registr_2]);
+    from_ull_to_double_and_back a,b;
+    a.dValue = first_operand_in_ull;
+    b.dValue = second_operand_in_ull;
+    double first_operand_in_double = a.dValue;
+    double second_operand_in_double = b.dValue;
+    first_operand_in_double -= second_operand_in_double + input.value;
+    a.iValue = first_operand_in_double;
+    ull res_in_ull = a.iValue;
+    registrs[input.registr_1 + 1] = _32_high_bits_of_ull(res_in_ull);
+    registrs[input.registr_1] = _32_low_bits_of_ull(res_in_ull);
+}
+
+
+//+
+void my_Emulator :: muld (RR input) {
+    ull first_operand_in_ull = merge_two_u_int_to_ull(registrs[input.registr_1 + 1], registrs[input.registr_1]), second_operand_in_ull = merge_two_u_int_to_ull(registrs[input.registr_2 + 1], registrs[input.registr_2]);
+    from_ull_to_double_and_back a,b;
+    a.dValue = first_operand_in_ull;
+    b.dValue = second_operand_in_ull;
+    double first_operand_in_double = a.dValue;
+    double second_operand_in_double = b.dValue;
+     first_operand_in_double *= (second_operand_in_double + input.value);
+    a.iValue = first_operand_in_double;
+    ull res_in_ull = a.iValue;
+    registrs[input.registr_1 + 1] = _32_high_bits_of_ull(res_in_ull);
+    registrs[input.registr_1] = _32_low_bits_of_ull(res_in_ull);
+}
+
+
+//+
+void my_Emulator :: divd (RR input) {
+    ull first_operand_in_ull = merge_two_u_int_to_ull(registrs[input.registr_1 + 1], registrs[input.registr_1]), second_operand_in_ull = merge_two_u_int_to_ull(registrs[input.registr_2 + 1], registrs[input.registr_2]);
+    from_ull_to_double_and_back a,b;
+    a.dValue = first_operand_in_ull;
+    b.dValue = second_operand_in_ull;
+    double first_operand_in_double = a.dValue;
+    double second_operand_in_double = b.dValue;
+    first_operand_in_double /= (second_operand_in_double + input.value);
+    a.iValue = first_operand_in_double;
+    ull res_in_ull = a.iValue;
+    registrs[input.registr_1 + 1] = _32_high_bits_of_ull(res_in_ull);
+    registrs[input.registr_1] = _32_low_bits_of_ull(res_in_ull);
+}
+
+
+//+
+void my_Emulator :: itod (RR input) {
+    ull value_to_transfer = registrs[input.registr_2] + input.value;
+    registrs[input.registr_1 + 1] = _32_high_bits_of_ull(value_to_transfer);
+    registrs[input.registr_1] = _32_low_bits_of_ull(value_to_transfer);
+}
+
+
+//+
+void my_Emulator :: dtoi (RR input) {
+    ull value_to_transfer_in_ull = merge_two_u_int_to_ull(registrs[input.registr_2 + 1], registrs[input.registr_2]);
+    from_ull_to_double_and_back a;
+    a.dValue = value_to_transfer_in_ull;
+    double value_in_double = a.dValue + input.value;
+    unsigned int res = value_in_double;
+    registrs [input.registr_1] = res;
+}
+
+
+//+
+void my_Emulator :: muli (RI input) {
+    ull f = registrs[input.registr_1], s = input.value;
+    ull a = f * s;
+    assert (input.registr_1 != 15);
+    registrs [input.registr_1] = _32_low_bits_of_ull (a);
+    registrs [input.registr_1 + 1] = _32_high_bits_of_ull (a);
 }
 
 
@@ -1115,6 +1380,206 @@ void my_Emulator :: calli (J input) {
 }
 
 
+//+
+void my_Emulator :: call (RR input) {
+    int address_in_int = registrs[input.registr_2] + input.value;
+    assert (address_in_int > end_machine_code_pointer && address_in_int < MAX_SIZE);
+    unsigned int address = address_in_int;
+    J a(41, address);
+    calli (a);
+    registrs[input.registr_1] = address;
+}
+
+
+//+
+void my_Emulator :: cmpi (RI input) {
+    int first = registrs[input.registr_1], second = input.value;
+    *equal_flag = 0, *more_flag = 0, *less_flag = 0;
+    if (first == second) {
+        *equal_flag = 1;
+    }
+    if (first > second) {
+        *more_flag = 1;
+    }
+    if (first < second) {
+        *less_flag = 1;
+    }
+}
+
+
+//+
+void my_Emulator :: cmp (RR input) {
+    int value = registrs[input.registr_2] + input.value;
+    RI a(44, input.registr_1, value);
+    cmpi(a);
+}
+
+
+//+
+void my_Emulator :: cmpd (RR input) {
+    unsigned int high_bits_of_reg_1 = registrs[input.registr_1 + 1], low_bits_of_reg_1 = registrs[input.registr_1], high_bits_of_reg_2 = registrs[input.registr_2 + 1], low_bits_of_reg_2 = registrs[input.registr_2];
+    ull first_in_ull = merge_two_u_int_to_ull(high_bits_of_reg_1, low_bits_of_reg_1), second_in_ull = merge_two_u_int_to_ull(high_bits_of_reg_2, low_bits_of_reg_2);
+    from_ull_to_double_and_back a, b;
+    a.dValue = first_in_ull;
+    b.dValue = second_in_ull;
+    double first_in_double = a.dValue, second_in_double = b.dValue;
+    *equal_flag = 0, *more_flag = 0, *less_flag = 0;
+    if (first_in_double == second_in_double) {
+        *equal_flag = 1;
+    }
+    if (first_in_double > second_in_double) {
+        *more_flag = 1;
+    }
+    if (first_in_double < second_in_double) {
+        *less_flag = 1;
+    }
+}
+
+
+//...
+void my_Emulator :: jmp (J input) {
+    //NOTE: in the clause it is said that we can go to address more than end_machine_code_pointer
+    assert (input.address >= 0 && input.address <= end_machine_code_pointer);
+    *counter_registr = input.address - 1; // -1 because we make registrs[15]++; in the end of Execute ()
+}
+
+
+//+
+void my_Emulator :: jne (J input) {
+    if (*equal_flag == 0) {
+        J a(46, input.address);
+        jmp (a);
+    }
+}
+
+
+//+
+void my_Emulator :: jeq (J input) {
+    if (*equal_flag == 1) {
+        J a(46, input.address);
+        jmp (a);
+    }
+}
+
+
+//+
+void my_Emulator :: jle (J input) {
+    if (*equal_flag == 1 || *less_flag == 1) {
+        J a(46, input.address);
+        jmp (a);
+    }
+}
+
+
+//+
+void my_Emulator :: jl (J input) {
+    if (*less_flag == 1) {
+        J a(46, input.address);
+        jmp (a);
+    }
+}
+
+
+//+
+void my_Emulator :: jge (J input) {
+    if (*equal_flag == 1 || *more_flag == 1) {
+        J a(46, input.address);
+        jmp (a);
+    }
+}
+
+
+//+
+void my_Emulator :: jg (J input) {
+    if (*more_flag == 1) {
+        J a(46, input.address);
+        jmp (a);
+    }
+}
+
+
+//+
+void my_Emulator :: load (RM input) {
+    assert (input.address >= 0 && input.address < MAX_SIZE);
+    string cell_value_in_str_and_binary = Von_Neumann_Memory[input.address];
+    unsigned int cell_value = calculate_str_in_binary_to_int(cell_value_in_str_and_binary, "unsigned");
+    //copy cell value in register
+    registrs [input.registr] = cell_value;
+}
+
+
+//...
+void my_Emulator :: store (RM input) {
+    //NOTE: in the clause it is said that we can modify machine code
+    assert (input.address > end_machine_code_pointer && input.address < MAX_SIZE);
+    Von_Neumann_Memory[input.address] = positive_T_to_binary(registrs[input.registr]);
+}
+
+
+//+
+void my_Emulator :: load2 (RM input) {
+    RM first(64, input.registr, input.address);
+    assert(input.address + 1 >= 1 && input.address + 1 < MAX_SIZE);
+    assert(input.registr + 1 >= 1 && input.registr + 1 < 16);
+    RM second(64, input.registr + 1, input.address + 1);
+    load(first);
+    load(second);
+}
+
+
+//+
+void my_Emulator :: store2 (RM input) {
+    RM first(64, input.registr, input.address);
+    assert(input.address + 1 >= 1 && input.address + 1 < MAX_SIZE);
+    assert(input.registr + 1 >= 1 && input.registr + 1 < 16);
+    RM second(64, input.registr + 1, input.address + 1);
+    store(first);
+    store(second);
+}
+
+
+//+
+void my_Emulator :: loadr (RR input) {
+    int address_in_int = registrs[input.registr_2] + input.value;
+    //NOTE: in the clause it is said that we can modify machine code
+    assert (address_in_int >= 0 && address_in_int < MAX_SIZE);
+    unsigned int address = registrs[input.registr_2] + input.value;
+    RM a(64, input.registr_1, address);
+    load(a);
+}
+
+
+//...
+void my_Emulator :: storer (RR input) {
+    int address_in_int = registrs[input.registr_2] + input.value;
+    //NOTE: in the clause it is said that we can modify machine code
+    assert (address_in_int > end_machine_code_pointer && address_in_int < MAX_SIZE);
+    unsigned int address = registrs[input.registr_2] + input.value;
+    RM a(65, input.registr_1, address);
+    store(a);
+}
+
+
+//+
+void my_Emulator :: loadr2 (RR input) {
+    RR first(68, input.registr_1, input.registr_2, input.value);
+    assert(input.registr_1 + 1 >= 1 && input.registr_1 + 1 < 16);
+    RR second (68, input.registr_1 + 1, input.registr_2, input.value + 1);
+    loadr(first);
+    loadr(second);
+}
+
+
+//+
+void my_Emulator :: storer2 (RR input) {
+    RR first(68, input.registr_1, input.registr_2, input.value);
+    assert(input.registr_1 + 1 >= 1 && input.registr_1 + 1 < 16);
+    RR second (68, input.registr_1 + 1, input.registr_2, input.value + 1);
+    storer(first);
+    storer(second);
+}
+
+
 /////////////////////////////////////////////////////////// MAIN ///////////////////////////////////////////////////////////
 
 
@@ -1125,7 +1590,7 @@ int main(int argc, char* argv[])
     out.open("output.txt");
 
     //we open file for reading and we fill in the vector with lines
-    ifstream in("input.fasm.txt");
+    ifstream in("input.fasm");
     if (in.is_open()) {
         while (getline(in, line)) {
            input_assembler.push_back(line);
@@ -1140,12 +1605,12 @@ int main(int argc, char* argv[])
     //for (auto i : map_for_functions_and_markers) {
       // cout << "function : " << i.first << "; address of function in my_Emulator address space : " << i.second << endl;
     //}
-    cout << endl;
+    //cout << endl;
 
     my_Emulator programm(executable_file);
     //programm.Print();
     //cout << endl;
     programm.Execute();
-
+    out.close();
     return 0;
 }
