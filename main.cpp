@@ -280,7 +280,7 @@ string positive_T_to_binary (T n) {
 
 //+
 //int because we will send signed values to the function and I guarantee that I wont send anything bigger than int ([-2^19;2^20-1])
-string to_binary (int value, unsigned int amount_of_bits, sign is__signed) {
+string to_binary (int value, unsigned int amount_of_bits, sign type) {
     //we check if it fits or not
     assert(amount_of_bits <= 20);
     assert(abs(value) < pow(2, amount_of_bits));
@@ -299,7 +299,7 @@ string to_binary (int value, unsigned int amount_of_bits, sign is__signed) {
     }
 
     //if signed
-    if (is__signed == 1) {
+    if (type == my_signed) {
         //if negative
         if (value < 0) {
             result[0] = '1';
@@ -316,14 +316,14 @@ string to_binary (int value, unsigned int amount_of_bits, sign is__signed) {
 
 //+
 //int because we will send signed values to the function and I guarantee that I wont send anything bigger than int/unsigned int
-int calculate_str_in_binary_to_int (const string& str_in_binary, sign is__signed) {
+int calculate_str_in_binary_to_int (const string& str_in_binary, sign type) {
     //check that we send only values in range int/unsigned int
     assert(str_in_binary.size() <= 32);
     int res = 0;
     size_t i = 0;
 
     //if signed
-    if (is__signed == 1) {
+    if (type == my_signed) {
         i = 1;
     }
 
@@ -334,7 +334,7 @@ int calculate_str_in_binary_to_int (const string& str_in_binary, sign is__signed
     }
 
     //if negative
-    if (is__signed == 1 && str_in_binary[0] == '1') {
+    if (type == my_signed && str_in_binary[0] == '1') {
         res *= -1;
         assert (res <= 0);
         if (res == 0) {
@@ -755,58 +755,58 @@ vector <string> my_Compiler :: return_words () {
 class my_Emulator {
 public :
     //functions
-    void halt(RI input) ;
-    void syscall(RI input);
-    void addi (RI input);
-    void lc (RI input);
-    void mov (RR input);
-    void mul (RR input);
-    void load (RM input);
-    void loadr (RR input);
-    void ret (J input);
-    void push (RI input);
-    void pop (RI input);
-    void calli (J input);
-    void cmp (RR input);
-    void call (RR input);
-    void cmpi (RI input);
-    void cmpd (RR input);
-    void jmp (J input);
-    void jne (J input);
-    void jeq (J input);
-    void jle (J input);
-    void jl (J input);
-    void jge (J input);
-    void jg (J input);
-    void store (RM input);
-    void storer (RR input);
-    void load2 (RM input);
-    void store2 (RM input);
-    void loadr2 (RR input);
-    void storer2 (RR input);
-    void add (RR input);
-    void sub (RR input);
-    void subi (RI input);
-    void muli (RI input);
-    void div (RR input);
-    void divi (RI input);
-    void shl (RR input);
-    void shli (RI input);
-    void shr (RR input);
-    void shri (RI input);
-    void my_and (RR input);
-    void andi (RI input);
-    void ori (RI input);
-    void my_or (RR input);
-    void my_xor (RR input);
-    void xori (RI input);
-    void my_not (RI input);
-    void addd (RR input);
-    void subd (RR input);
-    void muld (RR input);
-    void divd (RR input);
-    void itod (RR input);
-    void dtoi (RR input);
+    void halt(const RI& input) ;
+    void syscall(const RI& input);
+    void addi (const RI& input);
+    void lc (const RI& input);
+    void mov (const RR& input);
+    void mul (const RR& input);
+    void load (const RM& input);
+    void loadr (const RR& input);
+    void ret (const J& input);
+    void push (const RI& input);
+    void pop (const RI& input);
+    void calli (const J& input);
+    void cmp (const RR& input);
+    void call (const RR& input);
+    void cmpi (const RI& input);
+    void cmpd (const RR& input);
+    void jmp (const J& input);
+    void jne (const J& input);
+    void jeq (const J& input);
+    void jle (const J& input);
+    void jl (const J& input);
+    void jge (const J& input);
+    void jg (const J& input);
+    void store (const RM& input);
+    void storer (const RR& input);
+    void load2 (const RM& input);
+    void store2 (const RM& input);
+    void loadr2 (const RR& input);
+    void storer2 (const RR& input);
+    void add (const RR& input);
+    void sub (const RR& input);
+    void subi (const RI& input);
+    void muli (const RI& input);
+    void div (const RR& input);
+    void divi (const RI& input);
+    void shl (const RR& input);
+    void shli (const RI& input);
+    void shr (const RR& input);
+    void shri (const RI& input);
+    void my_and (const RR& input);
+    void andi (const RI& input);
+    void ori (const RI& input);
+    void my_or (const RR& input);
+    void my_xor (const RR& input);
+    void xori (const RI& input);
+    void my_not (const RI& input);
+    void addd (const RR& input);
+    void subd (const RR& input);
+    void muld (const RR& input);
+    void divd (const RR& input);
+    void itod (const RR& input);
+    void dtoi (const RR& input);
     void word ();
     //we should initialize address space when we send machine code to my_Emulator
     my_Emulator (my_Compiler);
@@ -1040,7 +1040,7 @@ void my_Emulator :: word () {
 }
 
 //...
-void my_Emulator :: push (RI input) {
+void my_Emulator :: push (const RI& input) {
     //NOTE: in the clause it is said that we can modify machine code
     assert (*stack_registr - 1 > end_machine_code_pointer);
     *stack_registr -= 1;
@@ -1050,7 +1050,7 @@ void my_Emulator :: push (RI input) {
 
 
 //+
-void my_Emulator :: pop (RI input) {
+void my_Emulator :: pop (const RI& input) {
     assert(*stack_registr < MAX_SIZE);
     //extract number from the stack
     unsigned int value_in_the_stack = calculate_str_in_binary_to_int (Von_Neumann_Memory[*stack_registr], my_unsigned);
@@ -1064,14 +1064,14 @@ void my_Emulator :: pop (RI input) {
 
 
 //+
-void my_Emulator :: halt (RI input) {
+void my_Emulator :: halt (const RI& input) {
     //stop the executing by going to the end of the machine code
     *counter_registr = end_machine_code_pointer + 3;
 }
 
 
 //+-
-void my_Emulator :: syscall (RI input) {
+void my_Emulator :: syscall (const RI& input) {
     if (input.value == 0) {
         //exit
         halt(input);
@@ -1122,45 +1122,45 @@ void my_Emulator :: syscall (RI input) {
 
 
 //+
-void my_Emulator :: addi (RI input) {
+void my_Emulator :: addi (const RI& input) {
     registrs[input.registr_1] += input.value;
 }
 
 
 //+
-void my_Emulator :: add (RR input) {
+void my_Emulator :: add (const RR& input) {
     registrs[input.registr_1] += registrs [input.registr_2] + input.value;
 }
 
 
 //+
-void my_Emulator :: subi (RI input) {
+void my_Emulator :: subi (const RI& input) {
     registrs[input.registr_1] -= input.value;
 }
 
 
 //+
-void my_Emulator :: sub (RR input) {
+void my_Emulator :: sub (const RR& input) {
     registrs[input.registr_1] -= (registrs[input.registr_2] + input.value);
 }
 
 
 //...
-void my_Emulator :: lc (RI input) {
+void my_Emulator :: lc (const RI& input) {
     //NOTE : we can have RI.value more than 2^20 when we send assembler code to my_Compiler. In this case we need to do something about it, for example, RI.value mod 2^20
     registrs[input.registr_1] = input.value;
 }
 
 
 //+
-void my_Emulator :: mov (RR input) {
+void my_Emulator :: mov (const RR& input) {
     int b = registrs[input.registr_2] + input.value;
     registrs[input.registr_1] = b;
 }
 
 
 //+
-void my_Emulator :: mul (RR input) {
+void my_Emulator :: mul (const RR& input) {
     ull f = registrs[input.registr_1], s = (registrs[input.registr_2] + input.value);
     ull a = f * s;
     assert (input.registr_1 != 15);
@@ -1170,7 +1170,7 @@ void my_Emulator :: mul (RR input) {
 
 
 //+
-void my_Emulator :: divi (RI input) {
+void my_Emulator :: divi (const RI& input) {
     assert (input.registr_1 != 15);
     ull first_operand = merge_two_u_int_to_ull(registrs[input.registr_1 + 1], registrs[input.registr_1]);
     ull second_operand = input.value;
@@ -1181,7 +1181,7 @@ void my_Emulator :: divi (RI input) {
 
 
 //+
-void my_Emulator :: div (RR input) {
+void my_Emulator :: div (const RR& input) {
     assert (input.registr_1 != 15);
     ull first_operand = merge_two_u_int_to_ull(registrs[input.registr_1 + 1], registrs[input.registr_1]);
     ull second_operand = registrs[input.registr_2] + input.value;
@@ -1192,19 +1192,19 @@ void my_Emulator :: div (RR input) {
 
 
 //...
-void my_Emulator :: shl (RR input) {
+void my_Emulator :: shl (const RR& input) {
     registrs[input.registr_1] = registrs[input.registr_1] << registrs[input.registr_2] + input.value;
 }
 
 
 //...
-void my_Emulator :: shli (RI input) {
+void my_Emulator :: shli (const RI& input) {
     registrs[input.registr_1] = registrs[input.registr_1] << input.value;
 }
 
 
 //...
-void my_Emulator :: shr (RR input) {
+void my_Emulator :: shr (const RR& input) {
     if (registrs[input.registr_2] + input.value >= 32) {
         registrs[input.registr_1] = 0;
     }
@@ -1215,7 +1215,7 @@ void my_Emulator :: shr (RR input) {
 
 
 //...
-void my_Emulator :: shri (RI input) {
+void my_Emulator :: shri (const RI& input) {
     if (input.value >= 32) {
         registrs[input.registr_1] = 0;
     }
@@ -1226,49 +1226,49 @@ void my_Emulator :: shri (RI input) {
 
 
 //+
-void my_Emulator :: andi (RI input) {
+void my_Emulator :: andi (const RI& input) {
     registrs[input.registr_1] = registrs[input.registr_1] & input.value;
 }
 
 
 //+
-void my_Emulator :: my_and (RR input) {
+void my_Emulator :: my_and (const RR& input) {
     registrs[input.registr_1] = registrs[input.registr_1] & (registrs[input.registr_2] + input.value);
 }
 
 
 //+
-void my_Emulator :: ori (RI input) {
+void my_Emulator :: ori (const RI& input) {
     registrs[input.registr_1] = registrs[input.registr_1] | input.value;
 }
 
 
 //+
-void my_Emulator :: my_or (RR input) {
+void my_Emulator :: my_or (const RR& input) {
     registrs[input.registr_1] = registrs[input.registr_1] | (registrs[input.registr_2] + input.value);
 }
 
 
 //+
-void my_Emulator :: xori (RI input) {
+void my_Emulator :: xori (const RI& input) {
     registrs[input.registr_1] = registrs[input.registr_1] ^ input.value;
 }
 
 
 //+
-void my_Emulator :: my_xor (RR input) {
+void my_Emulator :: my_xor (const RR& input) {
     registrs[input.registr_1] = registrs[input.registr_1] ^ (registrs[input.registr_2] + input.value);
 }
 
 
 //+
-void my_Emulator :: my_not (RI input) {
+void my_Emulator :: my_not (const RI& input) {
     registrs[input.registr_1] = ~registrs[input.registr_1];
 }
 
 
 //+
-void my_Emulator :: addd (RR input) {
+void my_Emulator :: addd (const RR& input) {
     ull first_operand_in_ull = merge_two_u_int_to_ull(registrs[input.registr_1 + 1], registrs[input.registr_1]), second_operand_in_ull = merge_two_u_int_to_ull(registrs[input.registr_2 + 1], registrs[input.registr_2]);
     from_ull_to_double_and_back a,b;
     a.dValue = first_operand_in_ull;
@@ -1284,7 +1284,7 @@ void my_Emulator :: addd (RR input) {
 
 
 //+
-void my_Emulator :: subd (RR input) {
+void my_Emulator :: subd (const RR& input) {
     ull first_operand_in_ull = merge_two_u_int_to_ull(registrs[input.registr_1 + 1], registrs[input.registr_1]), second_operand_in_ull = merge_two_u_int_to_ull(registrs[input.registr_2 + 1], registrs[input.registr_2]);
     from_ull_to_double_and_back a,b;
     a.dValue = first_operand_in_ull;
@@ -1300,7 +1300,7 @@ void my_Emulator :: subd (RR input) {
 
 
 //+
-void my_Emulator :: muld (RR input) {
+void my_Emulator :: muld (const RR& input) {
     ull first_operand_in_ull = merge_two_u_int_to_ull(registrs[input.registr_1 + 1], registrs[input.registr_1]), second_operand_in_ull = merge_two_u_int_to_ull(registrs[input.registr_2 + 1], registrs[input.registr_2]);
     from_ull_to_double_and_back a,b;
     a.dValue = first_operand_in_ull;
@@ -1316,7 +1316,7 @@ void my_Emulator :: muld (RR input) {
 
 
 //+
-void my_Emulator :: divd (RR input) {
+void my_Emulator :: divd (const RR& input) {
     ull first_operand_in_ull = merge_two_u_int_to_ull(registrs[input.registr_1 + 1], registrs[input.registr_1]), second_operand_in_ull = merge_two_u_int_to_ull(registrs[input.registr_2 + 1], registrs[input.registr_2]);
     from_ull_to_double_and_back a,b;
     a.dValue = first_operand_in_ull;
@@ -1332,7 +1332,7 @@ void my_Emulator :: divd (RR input) {
 
 
 //+
-void my_Emulator :: itod (RR input) {
+void my_Emulator :: itod (const RR& input) {
     ull value_to_transfer = registrs[input.registr_2] + input.value;
     registrs[input.registr_1 + 1] = _32_high_bits_of_ull(value_to_transfer);
     registrs[input.registr_1] = _32_low_bits_of_ull(value_to_transfer);
@@ -1340,7 +1340,7 @@ void my_Emulator :: itod (RR input) {
 
 
 //+
-void my_Emulator :: dtoi (RR input) {
+void my_Emulator :: dtoi (const RR& input) {
     ull value_to_transfer_in_ull = merge_two_u_int_to_ull(registrs[input.registr_2 + 1], registrs[input.registr_2]);
     from_ull_to_double_and_back a;
     a.dValue = value_to_transfer_in_ull;
@@ -1351,7 +1351,7 @@ void my_Emulator :: dtoi (RR input) {
 
 
 //+
-void my_Emulator :: muli (RI input) {
+void my_Emulator :: muli (const RI& input) {
     ull f = registrs[input.registr_1], s = input.value;
     ull a = f * s;
     assert (input.registr_1 != 15);
@@ -1361,7 +1361,7 @@ void my_Emulator :: muli (RI input) {
 
 
 //+
-void my_Emulator :: ret (J input) {
+void my_Emulator :: ret (const J& input) {
     //at first we retrieve the return address from the stack in counter_register(r15).
     //NOTE: I assume that when we see ret, in r14 is always the return address of the function we have called
     //39 - code of the command pop ; 15 - code of r15; 0 - modifier of r15
@@ -1377,7 +1377,7 @@ void my_Emulator :: ret (J input) {
 
 
 //...
-void my_Emulator :: calli (J input) {
+void my_Emulator :: calli (const J& input) {
     //NOTE: in the clause it is said that we can go to address more than end_machine_code_pointer
     assert (input.address >= 0 && input.address <= end_machine_code_pointer);
     //push return address in the stack
@@ -1389,7 +1389,7 @@ void my_Emulator :: calli (J input) {
 
 
 //+
-void my_Emulator :: call (RR input) {
+void my_Emulator :: call (const RR& input) {
     int address_in_int = registrs[input.registr_2] + input.value;
     assert (address_in_int < MAX_SIZE);
     unsigned int address = address_in_int;
@@ -1400,7 +1400,7 @@ void my_Emulator :: call (RR input) {
 
 
 //+
-void my_Emulator :: cmpi (RI input) {
+void my_Emulator :: cmpi (const RI& input) {
     int first = registrs[input.registr_1], second = input.value;
     *equal_flag = 0, *more_flag = 0, *less_flag = 0;
     if (first == second) {
@@ -1416,7 +1416,7 @@ void my_Emulator :: cmpi (RI input) {
 
 
 //+
-void my_Emulator :: cmp (RR input) {
+void my_Emulator :: cmp (const RR& input) {
     unsigned int first = registrs[input.registr_1];
     int second = registrs[input.registr_2] + input.value;
     *equal_flag = 0, *more_flag = 0, *less_flag = 0;
@@ -1433,7 +1433,7 @@ void my_Emulator :: cmp (RR input) {
 
 
 //+
-void my_Emulator :: cmpd (RR input) {
+void my_Emulator :: cmpd (const RR& input) {
     unsigned int high_bits_of_reg_1 = registrs[input.registr_1 + 1], low_bits_of_reg_1 = registrs[input.registr_1], high_bits_of_reg_2 = registrs[input.registr_2 + 1], low_bits_of_reg_2 = registrs[input.registr_2];
     ull first_in_ull = merge_two_u_int_to_ull(high_bits_of_reg_1, low_bits_of_reg_1), second_in_ull = merge_two_u_int_to_ull(high_bits_of_reg_2, low_bits_of_reg_2);
     from_ull_to_double_and_back a, b;
@@ -1454,7 +1454,7 @@ void my_Emulator :: cmpd (RR input) {
 
 
 //...
-void my_Emulator :: jmp (J input) {
+void my_Emulator :: jmp (const J& input) {
     //NOTE: in the clause it is said that we can go to address more than end_machine_code_pointer
     assert (input.address >= 0 && input.address <= end_machine_code_pointer);
     *counter_registr = input.address - 1; // -1 because we make registrs[15]++; in the end of Execute ()
@@ -1462,7 +1462,7 @@ void my_Emulator :: jmp (J input) {
 
 
 //+
-void my_Emulator :: jne (J input) {
+void my_Emulator :: jne (const J& input) {
     if (*equal_flag == 0) {
         J a(46, input.address);
         jmp (a);
@@ -1471,7 +1471,7 @@ void my_Emulator :: jne (J input) {
 
 
 //+
-void my_Emulator :: jeq (J input) {
+void my_Emulator :: jeq (const J& input) {
     if (*equal_flag == 1) {
         J a(46, input.address);
         jmp (a);
@@ -1480,7 +1480,7 @@ void my_Emulator :: jeq (J input) {
 
 
 //+
-void my_Emulator :: jle (J input) {
+void my_Emulator :: jle (const J& input) {
     if (*equal_flag == 1 || *less_flag == 1) {
         J a(46, input.address);
         jmp (a);
@@ -1489,7 +1489,7 @@ void my_Emulator :: jle (J input) {
 
 
 //+
-void my_Emulator :: jl (J input) {
+void my_Emulator :: jl (const J& input) {
     if (*less_flag == 1) {
         J a(46, input.address);
         jmp (a);
@@ -1498,7 +1498,7 @@ void my_Emulator :: jl (J input) {
 
 
 //+
-void my_Emulator :: jge (J input) {
+void my_Emulator :: jge (const J& input) {
     if (*equal_flag == 1 || *more_flag == 1) {
         J a(46, input.address);
         jmp (a);
@@ -1507,7 +1507,7 @@ void my_Emulator :: jge (J input) {
 
 
 //+
-void my_Emulator :: jg (J input) {
+void my_Emulator :: jg (const J& input) {
     if (*more_flag == 1) {
         J a(46, input.address);
         jmp (a);
@@ -1516,7 +1516,7 @@ void my_Emulator :: jg (J input) {
 
 
 //+
-void my_Emulator :: load (RM input) {
+void my_Emulator :: load (const RM& input) {
     assert (input.address >= 0 && input.address < MAX_SIZE);
     string cell_value_in_str_and_binary = Von_Neumann_Memory[input.address];
     unsigned int cell_value = calculate_str_in_binary_to_int(cell_value_in_str_and_binary, my_unsigned);
@@ -1526,7 +1526,7 @@ void my_Emulator :: load (RM input) {
 
 
 //...
-void my_Emulator :: store (RM input) {
+void my_Emulator :: store (const RM& input) {
     //NOTE: in the clause it is said that we can modify machine code
     assert (input.address > end_machine_code_pointer && input.address < MAX_SIZE);
     Von_Neumann_Memory[input.address] = positive_T_to_binary(registrs[input.registr]);
@@ -1534,7 +1534,7 @@ void my_Emulator :: store (RM input) {
 
 
 //+
-void my_Emulator :: load2 (RM input) {
+void my_Emulator :: load2 (const RM& input) {
     RM first(64, input.registr, input.address);
     assert(input.address + 1 >= 1 && input.address + 1 < MAX_SIZE);
     assert(input.registr + 1 >= 1 && input.registr + 1 < 16);
@@ -1545,7 +1545,7 @@ void my_Emulator :: load2 (RM input) {
 
 
 //+
-void my_Emulator :: store2 (RM input) {
+void my_Emulator :: store2 (const RM& input) {
     RM first(64, input.registr, input.address);
     assert(input.address + 1 >= 1 && input.address + 1 < MAX_SIZE);
     assert(input.registr + 1 >= 1 && input.registr + 1 < 16);
@@ -1556,7 +1556,7 @@ void my_Emulator :: store2 (RM input) {
 
 
 //+
-void my_Emulator :: loadr (RR input) {
+void my_Emulator :: loadr (const RR& input) {
     int address_in_int = registrs[input.registr_2] + input.value;
     //NOTE: in the clause it is said that we can modify machine code
     assert (address_in_int >= 0 && address_in_int < MAX_SIZE);
@@ -1567,7 +1567,7 @@ void my_Emulator :: loadr (RR input) {
 
 
 //...
-void my_Emulator :: storer (RR input) {
+void my_Emulator :: storer (const RR& input) {
     int address_in_int = registrs[input.registr_2] + input.value;
     //NOTE: in the clause it is said that we can modify machine code
     assert (address_in_int > end_machine_code_pointer && address_in_int < MAX_SIZE);
@@ -1578,7 +1578,7 @@ void my_Emulator :: storer (RR input) {
 
 
 //+
-void my_Emulator :: loadr2 (RR input) {
+void my_Emulator :: loadr2 (const RR& input) {
     RR first(68, input.registr_1, input.registr_2, input.value);
     assert(input.registr_1 + 1 >= 1 && input.registr_1 + 1 < 16);
     RR second (68, input.registr_1 + 1, input.registr_2, input.value + 1);
@@ -1588,7 +1588,7 @@ void my_Emulator :: loadr2 (RR input) {
 
 
 //+
-void my_Emulator :: storer2 (RR input) {
+void my_Emulator :: storer2 (const RR& input) {
     RR first(68, input.registr_1, input.registr_2, input.value);
     assert(input.registr_1 + 1 >= 1 && input.registr_1 + 1 < 16);
     RR second (68, input.registr_1 + 1, input.registr_2, input.value + 1);
