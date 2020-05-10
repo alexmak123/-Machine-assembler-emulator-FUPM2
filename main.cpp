@@ -316,25 +316,32 @@ string to_binary (int value, unsigned int amount_of_bits, sign type) {
 
 //+
 //int because we will send signed values to the function and I guarantee that I wont send anything bigger than int/unsigned int
-int calculate_str_in_binary_to_int (const string& str_in_binary, sign type) {
+int calculate_str_in_binary_to_int (const string& str_in_binary, sign type, const int& my_lower_bound = -1, const int& my_upper_bound = -1) {
     //check that we send only values in range int/unsigned int
     assert(str_in_binary.size() <= 32);
     int res = 0;
-    size_t i = 0;
+    size_t mylowerbound = 0, myupperbound = str_in_binary.size();
+    if (my_lower_bound != -1) {
+        mylowerbound = my_lower_bound;
+    }
+    if (my_upper_bound != -1) {
+        myupperbound = my_upper_bound;
+    }
+    size_t start = mylowerbound;
 
     //if signed
     if (type == my_signed) {
-        i = 1;
+        mylowerbound += 1;
     }
 
-    for (;i < str_in_binary.size(); i++) {
-        assert (str_in_binary[i] == '0' || str_in_binary[i] == '1');
+    for (;mylowerbound < myupperbound; mylowerbound++) {
+        assert (str_in_binary[mylowerbound] == '0' || str_in_binary[mylowerbound] == '1');
         res *= 2;
-        res += str_in_binary[i] - '0';
+        res += str_in_binary[mylowerbound] - '0';
     }
 
     //if negative
-    if (type == my_signed && str_in_binary[0] == '1') {
+    if (type == my_signed && str_in_binary[start] == '1') {
         res *= -1;
         assert (res <= 0);
         if (res == 0) {
@@ -377,13 +384,9 @@ public :
     }
     RI (const string& line_in_machine_code) {
         assert (line_in_machine_code.size() == 32);
-        string command_in_binary = line_in_machine_code.substr(0, 8), registr_1_in_binary = line_in_machine_code.substr(8, 4), value_in_binary = line_in_machine_code.substr(12, 20);
-        assert (command_in_binary.size() == 8);
-        assert (registr_1_in_binary.size() == 4);
-        assert (value_in_binary.size() == 20);
-        command = calculate_str_in_binary_to_int(command_in_binary, my_unsigned);
-        registr_1 = calculate_str_in_binary_to_int(registr_1_in_binary, my_unsigned);
-        value = calculate_str_in_binary_to_int(value_in_binary, my_signed);
+        command = calculate_str_in_binary_to_int(line_in_machine_code, my_unsigned, 0, 8);
+        registr_1 = calculate_str_in_binary_to_int(line_in_machine_code, my_unsigned, 8, 12);
+        value = calculate_str_in_binary_to_int(line_in_machine_code, my_signed, 12, 32);
     }
     unsigned int command, registr_1; //u_int because cant be negative
     int value; // int because can be negative
@@ -410,15 +413,10 @@ public :
     }
     RR (const string& line_in_machine_code) {
         assert (line_in_machine_code.size() == 32);
-        string command_in_binary = line_in_machine_code.substr(0, 8), registr_1_in_binary = line_in_machine_code.substr(8, 4), registr_2_in_binary = line_in_machine_code.substr(12, 4), value_in_binary = line_in_machine_code.substr(16, 16);
-        assert (command_in_binary.size() == 8);
-        assert (registr_1_in_binary.size() == 4);
-        assert (registr_2_in_binary.size() == 4);
-        assert (value_in_binary.size() == 16);
-        command = calculate_str_in_binary_to_int(command_in_binary, my_unsigned);
-        registr_1 = calculate_str_in_binary_to_int(registr_1_in_binary, my_unsigned);
-        registr_2 = calculate_str_in_binary_to_int(registr_2_in_binary, my_unsigned);
-        value = calculate_str_in_binary_to_int(value_in_binary, my_signed);
+        command = calculate_str_in_binary_to_int(line_in_machine_code, my_unsigned, 0, 8);
+        registr_1 = calculate_str_in_binary_to_int(line_in_machine_code, my_unsigned, 8, 12);
+        registr_2 = calculate_str_in_binary_to_int(line_in_machine_code, my_unsigned, 12, 16);
+        value = calculate_str_in_binary_to_int(line_in_machine_code, my_signed, 16, 32);
     }
     unsigned int command, registr_1, registr_2; //u_int because cant be negative
     int value; //int because can be negative
@@ -445,13 +443,9 @@ public :
     }
     RM (const string& line_in_machine_code) {
         assert (line_in_machine_code.size() == 32);
-        string command_in_binary = line_in_machine_code.substr(0, 8), registr_in_binary = line_in_machine_code.substr(8, 4), address_in_binary = line_in_machine_code.substr(12, 20);
-        assert (command_in_binary.size() == 8);
-        assert (registr_in_binary.size() == 4);
-        assert (address_in_binary.size() == 20);
-        command = calculate_str_in_binary_to_int(command_in_binary, my_unsigned);
-        registr = calculate_str_in_binary_to_int(registr_in_binary, my_unsigned);
-        address = calculate_str_in_binary_to_int(address_in_binary, my_unsigned);
+        command = calculate_str_in_binary_to_int(line_in_machine_code, my_unsigned, 0, 8);
+        registr = calculate_str_in_binary_to_int(line_in_machine_code, my_unsigned, 8, 12);
+        address = calculate_str_in_binary_to_int(line_in_machine_code, my_unsigned, 12, 32);
     }
     unsigned int command, registr, address; //u_int because cant be negative
     string total_value;
@@ -482,11 +476,8 @@ public :
     }
     J (const string& line_in_machine_code) {
         assert (line_in_machine_code.size() == 32);
-        string command_in_binary = line_in_machine_code.substr(0, 8), address_in_binary = line_in_machine_code.substr(12, 20);
-        assert (command_in_binary.size() == 8);
-        assert (address_in_binary.size() == 20);
-        command = calculate_str_in_binary_to_int(command_in_binary, my_unsigned);
-        address = calculate_str_in_binary_to_int(address_in_binary, my_unsigned);
+        command = calculate_str_in_binary_to_int(line_in_machine_code, my_unsigned, 0, 8);
+        address = calculate_str_in_binary_to_int(line_in_machine_code, my_unsigned, 12, 32);
     }
     unsigned int command, address; //u_int because cant be negative
     string total_value;
@@ -882,8 +873,7 @@ void my_Emulator :: Execute () {
     while (*counter_registr <= end_machine_code_pointer) {
         string curr_line_in_binary = Von_Neumann_Memory[*counter_registr];
 
-        string command_in_binary = curr_line_in_binary.substr(0, 8);
-        unsigned int command = calculate_str_in_binary_to_int(command_in_binary, my_unsigned);
+        unsigned int command = calculate_str_in_binary_to_int(curr_line_in_binary, my_unsigned, 0, 8);
         string type = command_to_type_of_command[command];
 
         if (type == "RR") {
