@@ -375,7 +375,7 @@ public :
         }
         total_value = to_binary(command, 8, my_unsigned) + to_binary(registr_1, 4, my_unsigned) + to_binary(value, 20, my_signed);
     }
-    RI (string line_in_machine_code) {
+    RI (const string& line_in_machine_code) {
         assert (line_in_machine_code.size() == 32);
         string command_in_binary = line_in_machine_code.substr(0, 8), registr_1_in_binary = line_in_machine_code.substr(8, 4), value_in_binary = line_in_machine_code.substr(12, 20);
         assert (command_in_binary.size() == 8);
@@ -408,7 +408,7 @@ public :
         value = stoi(parsed_line_in_assembler[3]);
         total_value = to_binary(command, 8, my_unsigned) + to_binary(registr_1, 4, my_unsigned) + to_binary(registr_2, 4, my_unsigned) + to_binary(value, 16, my_signed);
     }
-    RR (string line_in_machine_code) {
+    RR (const string& line_in_machine_code) {
         assert (line_in_machine_code.size() == 32);
         string command_in_binary = line_in_machine_code.substr(0, 8), registr_1_in_binary = line_in_machine_code.substr(8, 4), registr_2_in_binary = line_in_machine_code.substr(12, 4), value_in_binary = line_in_machine_code.substr(16, 16);
         assert (command_in_binary.size() == 8);
@@ -443,7 +443,7 @@ public :
         address = stoi(parsed_line_in_assembler[2]);
         total_value = to_binary(command, 8, my_unsigned) + to_binary(registr, 4, my_unsigned) + to_binary(address, 20, my_unsigned);
     }
-    RM (string line_in_machine_code) {
+    RM (const string& line_in_machine_code) {
         assert (line_in_machine_code.size() == 32);
         string command_in_binary = line_in_machine_code.substr(0, 8), registr_in_binary = line_in_machine_code.substr(8, 4), address_in_binary = line_in_machine_code.substr(12, 20);
         assert (command_in_binary.size() == 8);
@@ -480,7 +480,7 @@ public :
         }
         total_value = to_binary(command, 8, my_unsigned) + "0000" + to_binary(address, 20, my_unsigned);
     }
-    J (string line_in_machine_code) {
+    J (const string& line_in_machine_code) {
         assert (line_in_machine_code.size() == 32);
         string command_in_binary = line_in_machine_code.substr(0, 8), address_in_binary = line_in_machine_code.substr(12, 20);
         assert (command_in_binary.size() == 8);
@@ -970,12 +970,12 @@ void my_Emulator :: Execute () {
         } else {
             assert (0 == 1);
         }
-        if (counter % 100000 == 0) {
+        /*if (counter % 100000 == 0) {
             cout << counter << endl;
-        }
+        }*/
         //cout << counter << " r0 :  " << registrs [0] << " r1 :  " << registrs [1] << " r2 :  " << registrs [2] << " r3 :  " << registrs [3] << " r4 :  " << registrs [4]<< " r5 :  " << registrs [5] << " r6 :  " << registrs [6] << " r7 :  " << registrs [7] << " r8 :  " << registrs [8] << endl;
         (*counter_registr)++ ;
-        counter ++;
+        //counter ++;
     }
 }
 
@@ -1607,7 +1607,7 @@ int main(int argc, char* argv[])
     out.open("output.txt");
 
     //we open file for reading and we fill in the vector with lines
-    ifstream in("input.fasm.txt");
+    ifstream in("input.fasm");
     if (in.is_open()) {
         while (getline(in, line)) {
            input_assembler.push_back(line);
