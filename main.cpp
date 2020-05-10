@@ -17,6 +17,12 @@ using namespace std;
 /////////////////////////////////////////////////////////// CONSTANTS ///////////////////////////////////////////////////////////
 
 
+enum sign {
+my_unsigned = 0,
+my_signed = 1
+};
+
+
 enum registr_code {
 r0 = 0,
 r1 = 1,
@@ -274,7 +280,7 @@ string positive_T_to_binary (T n) {
 
 //+
 //int because we will send signed values to the function and I guarantee that I wont send anything bigger than int ([-2^19;2^20-1])
-string to_binary (int value, unsigned int amount_of_bits, string type) {
+string to_binary (int value, unsigned int amount_of_bits, sign is__signed) {
     //we check if it fits or not
     assert(amount_of_bits <= 20);
     assert(abs(value) < pow(2, amount_of_bits));
@@ -293,7 +299,7 @@ string to_binary (int value, unsigned int amount_of_bits, string type) {
     }
 
     //if signed
-    if (type == "signed") {
+    if (is__signed == 1) {
         //if negative
         if (value < 0) {
             result[0] = '1';
@@ -310,14 +316,14 @@ string to_binary (int value, unsigned int amount_of_bits, string type) {
 
 //+
 //int because we will send signed values to the function and I guarantee that I wont send anything bigger than int/unsigned int
-int calculate_str_in_binary_to_int (string str_in_binary, string type) {
+int calculate_str_in_binary_to_int (const string& str_in_binary, sign is__signed) {
     //check that we send only values in range int/unsigned int
     assert(str_in_binary.size() <= 32);
     int res = 0;
     size_t i = 0;
 
     //if signed
-    if (type == "signed") {
+    if (is__signed == 1) {
         i = 1;
     }
 
@@ -328,7 +334,7 @@ int calculate_str_in_binary_to_int (string str_in_binary, string type) {
     }
 
     //if negative
-    if (type == "signed" && str_in_binary[0] == '1') {
+    if (is__signed == 1 && str_in_binary[0] == '1') {
         res *= -1;
         assert (res <= 0);
         if (res == 0) {
@@ -367,26 +373,17 @@ public :
         else {
             value = map_for_functions_and_markers[parsed_line_in_assembler[2]];
         }
-        total_value = to_binary(command, 8, "unsigned") + to_binary(registr_1, 4, "unsigned") + to_binary(value, 20, "signed");
+        total_value = to_binary(command, 8, my_unsigned) + to_binary(registr_1, 4, my_unsigned) + to_binary(value, 20, my_signed);
     }
     RI (string line_in_machine_code) {
         assert (line_in_machine_code.size() == 32);
-        string command_in_binary, registr_1_in_binary, value_in_binary;
-        for (size_t i = 0; i < line_in_machine_code.size(); i++) {
-            if (i < 8) {
-                command_in_binary += line_in_machine_code[i];
-            } else if (i >= 8 && i < 12) {
-                registr_1_in_binary += line_in_machine_code[i];
-            } else {
-                value_in_binary += line_in_machine_code[i];
-            }
-        }
+        string command_in_binary = line_in_machine_code.substr(0, 8), registr_1_in_binary = line_in_machine_code.substr(8, 4), value_in_binary = line_in_machine_code.substr(12, 20);
         assert (command_in_binary.size() == 8);
         assert (registr_1_in_binary.size() == 4);
         assert (value_in_binary.size() == 20);
-        command = calculate_str_in_binary_to_int(command_in_binary, "unsigned");
-        registr_1 = calculate_str_in_binary_to_int(registr_1_in_binary, "unsigned");
-        value = calculate_str_in_binary_to_int(value_in_binary, "signed");
+        command = calculate_str_in_binary_to_int(command_in_binary, my_unsigned);
+        registr_1 = calculate_str_in_binary_to_int(registr_1_in_binary, my_unsigned);
+        value = calculate_str_in_binary_to_int(value_in_binary, my_signed);
     }
     unsigned int command, registr_1; //u_int because cant be negative
     int value; // int because can be negative
@@ -409,30 +406,19 @@ public :
         registr_2 = str_to_registr[parsed_line_in_assembler[2]];
         //print_vector_string(parsed_line_in_assembler, "RR");
         value = stoi(parsed_line_in_assembler[3]);
-        total_value = to_binary(command, 8, "unsigned") + to_binary(registr_1, 4, "unsigned") + to_binary(registr_2, 4, "unsigned") + to_binary(value, 16, "signed");
+        total_value = to_binary(command, 8, my_unsigned) + to_binary(registr_1, 4, my_unsigned) + to_binary(registr_2, 4, my_unsigned) + to_binary(value, 16, my_signed);
     }
     RR (string line_in_machine_code) {
         assert (line_in_machine_code.size() == 32);
-        string command_in_binary, registr_1_in_binary, registr_2_in_binary, value_in_binary;
-        for (size_t i = 0; i < line_in_machine_code.size(); i++) {
-            if (i < 8) {
-                command_in_binary += line_in_machine_code[i];
-            } else if (i >= 8 && i < 12) {
-                registr_1_in_binary += line_in_machine_code[i];
-            } else if (i >= 12 && i < 16) {
-                registr_2_in_binary += line_in_machine_code[i];
-            } else {
-                value_in_binary += line_in_machine_code[i];
-            }
-        }
+        string command_in_binary = line_in_machine_code.substr(0, 8), registr_1_in_binary = line_in_machine_code.substr(8, 4), registr_2_in_binary = line_in_machine_code.substr(12, 4), value_in_binary = line_in_machine_code.substr(16, 16);
         assert (command_in_binary.size() == 8);
         assert (registr_1_in_binary.size() == 4);
         assert (registr_2_in_binary.size() == 4);
         assert (value_in_binary.size() == 16);
-        command = calculate_str_in_binary_to_int(command_in_binary, "unsigned");
-        registr_1 = calculate_str_in_binary_to_int(registr_1_in_binary, "unsigned");
-        registr_2 = calculate_str_in_binary_to_int(registr_2_in_binary, "unsigned");
-        value = calculate_str_in_binary_to_int(value_in_binary, "signed");
+        command = calculate_str_in_binary_to_int(command_in_binary, my_unsigned);
+        registr_1 = calculate_str_in_binary_to_int(registr_1_in_binary, my_unsigned);
+        registr_2 = calculate_str_in_binary_to_int(registr_2_in_binary, my_unsigned);
+        value = calculate_str_in_binary_to_int(value_in_binary, my_signed);
     }
     unsigned int command, registr_1, registr_2; //u_int because cant be negative
     int value; //int because can be negative
@@ -455,26 +441,17 @@ public :
         assert (stoi(parsed_line_in_assembler[2]) >= 0);
         //print_vector_string(parsed_line_in_assembler, "RM");
         address = stoi(parsed_line_in_assembler[2]);
-        total_value = to_binary(command, 8, "unsigned") + to_binary(registr, 4, "unsigned") + to_binary(address, 20, "unsigned");
+        total_value = to_binary(command, 8, my_unsigned) + to_binary(registr, 4, my_unsigned) + to_binary(address, 20, my_unsigned);
     }
     RM (string line_in_machine_code) {
         assert (line_in_machine_code.size() == 32);
-        string command_in_binary, registr_in_binary, address_in_binary;
-        for (size_t i = 0; i < line_in_machine_code.size(); i++) {
-            if (i < 8) {
-                command_in_binary += line_in_machine_code[i];
-            } else if (i >= 8 && i < 12) {
-                registr_in_binary += line_in_machine_code[i];
-            } else {
-                address_in_binary += line_in_machine_code[i];
-            }
-        }
+        string command_in_binary = line_in_machine_code.substr(0, 8), registr_in_binary = line_in_machine_code.substr(8, 4), address_in_binary = line_in_machine_code.substr(12, 20);
         assert (command_in_binary.size() == 8);
         assert (registr_in_binary.size() == 4);
         assert (address_in_binary.size() == 20);
-        command = calculate_str_in_binary_to_int(command_in_binary, "unsigned");
-        registr = calculate_str_in_binary_to_int(registr_in_binary, "unsigned");
-        address = calculate_str_in_binary_to_int(address_in_binary, "unsigned");
+        command = calculate_str_in_binary_to_int(command_in_binary, my_unsigned);
+        registr = calculate_str_in_binary_to_int(registr_in_binary, my_unsigned);
+        address = calculate_str_in_binary_to_int(address_in_binary, my_unsigned);
     }
     unsigned int command, registr, address; //u_int because cant be negative
     string total_value;
@@ -501,24 +478,15 @@ public :
         else {
             address = map_for_functions_and_markers[parsed_line_in_assembler[1]];
         }
-        total_value = to_binary(command, 8, "unsigned") + "0000" + to_binary(address, 20, "unsigned");
+        total_value = to_binary(command, 8, my_unsigned) + "0000" + to_binary(address, 20, my_unsigned);
     }
     J (string line_in_machine_code) {
         assert (line_in_machine_code.size() == 32);
-        string command_in_binary, address_in_binary;
-        for (size_t i = 0; i < line_in_machine_code.size(); i++) {
-            if (i < 8) {
-                command_in_binary += line_in_machine_code[i];
-            } else if (i >= 8 && i < 12) {
-                //just skip it;
-            } else {
-                address_in_binary += line_in_machine_code[i];
-            }
-        }
+        string command_in_binary = line_in_machine_code.substr(0, 8), address_in_binary = line_in_machine_code.substr(12, 20);
         assert (command_in_binary.size() == 8);
         assert (address_in_binary.size() == 20);
-        command = calculate_str_in_binary_to_int(command_in_binary, "unsigned");
-        address = calculate_str_in_binary_to_int(address_in_binary, "unsigned");
+        command = calculate_str_in_binary_to_int(command_in_binary, my_unsigned);
+        address = calculate_str_in_binary_to_int(address_in_binary, my_unsigned);
     }
     unsigned int command, address; //u_int because cant be negative
     string total_value;
@@ -700,10 +668,10 @@ vector<string> to_machine_code (vector<string> input_assembler) {
     //but we need to remember that we can have this type of syntax (lo : cmpi r2 10) so we don't delete the hole line in this case
     declare_func_plus_cleaning (input_assembler);
     //for checking
-    for (size_t i = 0; i < input_assembler.size(); i++) {
+    /*for (size_t i = 0; i < input_assembler.size(); i++) {
         cout << "index : " << i << " type : " << define_a_type(input_assembler[i]) << " " <<input_assembler[i] << endl;
     }
-    cout << "ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS : " << ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS << endl;
+    cout << "ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS : " << ADDRESS_IN_MY_EMULATOR_WHERE_EXECUTING_STARTS << endl;*/
 
     for (size_t i = 0; i < input_assembler.size(); i++) {
         string curr_line = input_assembler[i];
@@ -910,15 +878,12 @@ void my_Emulator :: Print () {
 void my_Emulator :: Execute () {
     //at first we check if my_Emulator is initialized
     assert (*stack_registr == MAX_SIZE);
-
+    int counter = 0;
     while (*counter_registr <= end_machine_code_pointer) {
         string curr_line_in_binary = Von_Neumann_Memory[*counter_registr];
 
-        string command_in_binary;
-        for (int i = 0; i < 8; i++) {
-            command_in_binary += curr_line_in_binary[i];
-        }
-        unsigned int command = calculate_str_in_binary_to_int(command_in_binary, "unsigned");
+        string command_in_binary = curr_line_in_binary.substr(0, 8);
+        unsigned int command = calculate_str_in_binary_to_int(command_in_binary, my_unsigned);
         string type = command_to_type_of_command[command];
 
         if (type == "RR") {
@@ -1005,8 +970,12 @@ void my_Emulator :: Execute () {
         } else {
             assert (0 == 1);
         }
-        cout << *counter_registr << endl;
+        if (counter % 100000 == 0) {
+            cout << counter << endl;
+        }
+        //cout << counter << " r0 :  " << registrs [0] << " r1 :  " << registrs [1] << " r2 :  " << registrs [2] << " r3 :  " << registrs [3] << " r4 :  " << registrs [4]<< " r5 :  " << registrs [5] << " r6 :  " << registrs [6] << " r7 :  " << registrs [7] << " r8 :  " << registrs [8] << endl;
         (*counter_registr)++ ;
+        counter ++;
     }
 }
 
@@ -1035,7 +1004,7 @@ unsigned int _32_low_bits_of_ull (ull value) {
     for (int i = 32; i < 64; i++) {
         _32_low_bits[i-32] = ull_to_str[i];
     }
-    return calculate_str_in_binary_to_int(_32_low_bits, "unsigned");
+    return calculate_str_in_binary_to_int(_32_low_bits, my_unsigned);
 }
 
 
@@ -1053,7 +1022,7 @@ unsigned int _32_high_bits_of_ull (ull value) {
     for (int i = 0; i < 32; i++) {
         _32_high_bits[i] = ull_to_str[i];
     }
-    return calculate_str_in_binary_to_int(_32_high_bits, "unsigned");
+    return calculate_str_in_binary_to_int(_32_high_bits, my_unsigned);
 }
 
 
@@ -1084,7 +1053,7 @@ void my_Emulator :: push (RI input) {
 void my_Emulator :: pop (RI input) {
     assert(*stack_registr < MAX_SIZE);
     //extract number from the stack
-    unsigned int value_in_the_stack = calculate_str_in_binary_to_int (Von_Neumann_Memory[*stack_registr], "unsigned");
+    unsigned int value_in_the_stack = calculate_str_in_binary_to_int (Von_Neumann_Memory[*stack_registr], my_unsigned);
     //clear the cell
     Von_Neumann_Memory[*stack_registr].clear();
     *stack_registr += 1;
@@ -1550,7 +1519,7 @@ void my_Emulator :: jg (J input) {
 void my_Emulator :: load (RM input) {
     assert (input.address >= 0 && input.address < MAX_SIZE);
     string cell_value_in_str_and_binary = Von_Neumann_Memory[input.address];
-    unsigned int cell_value = calculate_str_in_binary_to_int(cell_value_in_str_and_binary, "unsigned");
+    unsigned int cell_value = calculate_str_in_binary_to_int(cell_value_in_str_and_binary, my_unsigned);
     //copy cell value in register
     registrs [input.registr] = cell_value;
 }
@@ -1647,16 +1616,16 @@ int main(int argc, char* argv[])
     in.close();
 
     my_Compiler executable_file(input_assembler);
-    executable_file.Print();
-    cout << endl;
+    //executable_file.Print();
+    //cout << endl;
 
-    for (auto i : map_for_functions_and_markers) {
+    /*for (auto i : map_for_functions_and_markers) {
        cout << "function : " << i.first << "; address of function in my_Emulator address space : " << i.second << endl;
     }
-    cout << endl;
+    cout << endl;*/
 
     my_Emulator programm(executable_file);
-    programm.Print();
+    //programm.Print();
     //cout << endl;
     programm.Execute();
     out.close();
